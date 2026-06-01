@@ -47,7 +47,7 @@ jobs:
             # Install the backend dependencies to be able to do a syntax check and import test. We don't run the tests here, just a simple import check to catch basic syntax errors and missing dependencies.
               run: |
                 cd backend 
-                python -m install --upgrade pip
+                python -m pip install --upgrade pip
                 if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
             - name: Test import / Syntax check
