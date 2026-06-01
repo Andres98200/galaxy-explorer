@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Any, Optional
 from datasets import load_dataset 
 from sklearn.manifold import TSNE 
@@ -6,11 +7,20 @@ import pandas as pd
 
 class DataRepository:
     def __init__(self):
-        print("Connexion to Hugging Face API")
-        dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
-        
-        print("Type du dataset :", type(dataset))
+        CACHE_FILE = "galaxy_cache.parquet"
 
+        if os.path.exists(CACHE_FILE):
+            print("Loading galaxy from the cache file...")
+            self.galaxy_df = pd.read_parquet(CACHE_FILE)
+            print("Galaxy loaded from cache with shape:", self.galaxy_df.shape)
+            return
+        
+
+        print("No cache file found, Connexion to Hugging Face API")
+        dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
+
+        dataset = dataset.shuffle(seed=42, buffer_size=50000)
+        
         print("Collecting all the topics", )
 
         phrases = []
@@ -20,15 +30,15 @@ class DataRepository:
 
         count_data = {}
         MAX_PHRASES_PER_TOPIC = 25
-        MAX_LINES_TO_SCAN = 5000000  
         total_scanned = 0
+        MAX_LINES_TO_SCAN = 5000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
 
         for line in dataset['clusters']:
             total_scanned += 1
             
             # Petit indicateur visuel pour voir que ça avance
             if total_scanned % 2000 == 0:
-                print(f"Lignes scannées : {total_scanned}...")
+                print(f"Lines scanned: {total_scanned}")
 
             topic_line = line.get('topic')
             phrase_line = line.get('factoid') 
@@ -45,12 +55,11 @@ class DataRepository:
                 models.append(line.get('model_id'))
                 clusters.append(line.get('cluster'))
                 count_data[topic_line] += 1
-
-            # Si on a atteint notre limite de scan, on coupe !
+            
             if total_scanned >= MAX_LINES_TO_SCAN:
-                print(f"✋ Limite de sécurité atteinte ({MAX_LINES_TO_SCAN} lignes). Arrêt du scan.")
+                print(f"Limite of {MAX_LINES_TO_SCAN} lines scanned reached, stopping the data collection.")
                 break
-        
+
         ### Embedding the phrases
         print("Embedding the phrases")
         embeddings = embed_sentences(phrases)
@@ -71,6 +80,10 @@ class DataRepository:
         })
         self.galaxy_df['cluster'] = self.galaxy_df['cluster'].fillna(-1).astype(int)
         print("3D galaxy dataframe created with shape:", self.galaxy_df.shape)
+
+        print(f"Saving data on the cache file {CACHE_FILE} for faster loading")
+        self.galaxy_df.to_parquet(CACHE_FILE)
+        print("Data saved to cache successfully.")
 
     def get_metadata_options(self) -> Dict[str, List[str]]:
             return {

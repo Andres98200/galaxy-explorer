@@ -6,3 +6,6 @@ env/
 # Ignorer les fichiers de cache Python
 __pycache__/
 *.pyc
+
+# Ignorer les fichiers de cache
+galaxy_cache.parquet
