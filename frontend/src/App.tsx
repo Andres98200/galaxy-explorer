@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import StatCard from './components/StatCard'
 import './App.css'
+import SideBarFilters from './components/sideBarFilters'
 
 export default function App() {
 
@@ -15,7 +16,7 @@ export default function App() {
     <div className="dashboard-container">
 
       <aside className="sidebar-placeholder">
-        <p>Sidebar</p>
+        <SideBarFilters />
       </aside>
 
       <main className="main-content">
