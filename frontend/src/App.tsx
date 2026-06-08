@@ -3,6 +3,7 @@ import StatCard from './components/StatCard'
 import './App.css'
 import SideBarFilters from './components/sideBarFilters'
 import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/services/api.ts'
+import GalaxyCanvas from './components/galaxyCanvas.tsx'
 
 export default function App() {
 
@@ -87,10 +88,7 @@ export default function App() {
         </div>
 
         <div className="content-grid">
-          {filteredPoints.length}/
-          {points.length}/
-          {activeModelNames.length}/
-          {activeTopicNames.length}
+          <GalaxyCanvas points={filteredPoints} topics={topics} />
         </div>
 
       </main>
