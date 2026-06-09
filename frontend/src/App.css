@@ -85,7 +85,7 @@
   background-color: var(--bg-card);
   box-shadow: var(--shadow);
   border-radius: 0px 0px 0px 15px;
-  padding: 70px 24px;
+  padding: 40px 24px;
   display : flex;
   flex-direction: column;
   gap: 32px; 
@@ -99,12 +99,14 @@
   flex-direction: column;
   gap: 12px;
   text-align: left;
+  position: relative
 }
 
 .filter-group h3 {
   margin: 0;
   font-size: 1.2rem;
   color: var(--text);
+  font-weight: 600;
 }
 
 .select-box{
@@ -114,60 +116,118 @@
   padding: 8px 12px;
   min-height: 42px;
   display: flex;
+  border: 1px solid #e2e8f0;
+  max-height: 240px; 
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
   align-items: center;
+}
+
+.select-box:hover {
+  border-color: #cbd5e1;
+}
+
+
+.selected-tags, .available-tags-pool{
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.selected-tags::-webkit-scrollbar, 
+.available-tags-pool::-webkit-scrollbar{
+  width: 8px;
+
+}
+
+.selected-tags::-webkit-scrollbar-thumb,
+.available-tags-pool::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
   
 }
 
-.selected-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
 
 .tag{
-  border-radius: 10px;
-  font-size: 1.1rem;
-  font-weight: 650;
-  color: var(--bg-card);
-  padding: 6px;
-  display: inline-flex;
+  background-color: #f8fafc !important ;
+  border: 1px solid #e2e8f0;           
+  border-left: 8px solid var(--tag-color, #94a3b8);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;                    
+  padding: 0 12px;
+  display: flex;
   align-items: center;
-  cursor: pointer;
+  height: 36px;
+  width: 100%;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+  text-align: left;
 }
 
 .tag:hover {
-  transform: scale(1.03);
-  opacity: 0.7;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  color: #e41710;
+  padding-left: 16px;
+
 }
 
 .close-tag {
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+}
+
+.close-tag:hover {
+  color: #ef4444;
 }
 
 .drop-down-arrow {
   color: var(--text-h);
-  font-size: 1.5rem;
+  font-size: 2rem;
   display: flex;
   cursor: pointer;
+  transition: transform 0.3s ease;
+
+}
+
+.drop-down-arrow.open {
+  transform: rotate(180deg);
 }
 
 .btn-select-all {
-  background-color: #d1d5db;
-  color: #1f2937;
+  background-color: var(--bg-card);
+  color: #475569;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  border: none;
-  height: 40px;
-  text-align: left;
-  font-size: 1.1rem;
-  font-weight: 700;
+  height: 44px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  padding-left: 12px;
   width: 100%;
+  transition: all 0.15s;
 }
 
-.btn-select-all:hover{
-  opacity: 0.7;
+.btn-select-all:hover {
+  color: #3254eb;
+  border-color: #cbd5e1;
 }
 
 .dropdown-content {
@@ -181,38 +241,56 @@
   margin-top: -4px;
 }
 
-.available-tags-pool {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
 
 .tag-pill{
-  font-size: 1.1rem;
-  font-weight: 650;
-  border-radius: 10px;
+  background-color: #ffffff !important ;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #475569;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
   cursor: pointer;
-  display: inline-block;
-  color: var(--bg-card);
-  padding: 6px;
-  display: inline-flex;
+  border-left: 8px solid var(--tag-color, #94a3b8);
+  
 }
 
 .tag-pill:hover{
-  transform: scale(1.03);
-  opacity: 0.8;
+  background-color: #f8fafc;
+  color: #3254eb;
+  border-color: #cbd5e1;
+  padding-left: 14px;
 }
 
 .logo {
-  height: 100px;
+  height: 60px;
   background-color: rgb(208, 154, 221);
   font-weight: 700;
   border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-card)
 }
 
 .galaxy-canvas-wrapper {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+
+.tag-text {
+  white-space: nowrap;
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  flex-grow: 1;             
+  text-align: left;         
+  padding-right: 8px;       
 }
