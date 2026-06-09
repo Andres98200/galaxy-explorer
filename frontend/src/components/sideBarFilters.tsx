@@ -1,26 +1,27 @@
 import { useState } from 'react'
+import { type FilterItem } from '../services/api'
 
-export default function SidebarFilters() {
+interface SideBarFiltersProps {
+  models: FilterItem[];
+  setModels: React.Dispatch<React.SetStateAction<FilterItem[]>>;
+  topics: FilterItem[];
+  setTopics: React.Dispatch<React.SetStateAction<FilterItem[]>>;
+}
 
+export default function SidebarFilters({models, setModels, topics, setTopics}: SideBarFiltersProps) {
+  const [isOpenModels, setOpenModels] = useState(false);
+  const [isOpenTopics, setOpenTopics] = useState(false);
 
-  const [isOpenModels, setOpenModels] = useState(false)
-  const [isOpenTopics, setOpenTopics] = useState(false)
-    
-  const models = [
-    { name: 'GPT-4', color: '#4db5fa', active: true },
-    { name: 'Qwen', color: '#ff9933', active: true },
-    { name: 'Meta-llama', color: '#00ff66', active: false },
-    { name: 'Gemma', color: '#ffcc00', active: false },
-    { name: 'GPT-5', color: '#ff3399', active: false },
-  ]
+  const toggleModel = (name: string) => {
+    setModels(prev => prev.map(m => m.name === name ? {...m, active: !m.active } : m )
+  );
+};
 
-  const topics = [
-    { name: 'Donald', color: '#0099ff', active: true },
-    { name: 'Brazil', color: '#ff9933', active: true },
-    { name: 'War of China', color: '#00ff66', active: false },
-    { name: 'Water', color: '#ffcc00', active: false },
-    { name: 'Moon', color: '#ff3399', active: false },
-  ]
+    const toggleTopic = (name: string) => {
+    setTopics(prev => prev.map(t => t.name === name ? {...t, active: !t.active } : t )
+  );
+};
+
 
   return (
 
@@ -32,8 +33,15 @@ export default function SidebarFilters() {
         <div className="select-box" onClick={()=> setOpenModels(!isOpenModels)}>
           <div className="selected-tags">
             {models.filter(m => m.active).map(m => (
-              <span key={m.name} className="tag" style={{ backgroundColor: m.color }}>
-                {m.name} <span className="close-tag material-symbols-outlined">close_small</span>
+              <span key={m.name} className="tag" 
+                    style={{ backgroundColor: m.color }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleModel(m.name)
+                    }}
+              >
+                {m.name} 
+                <span className="close-tag material-symbols-outlined">close_small</span>
               </span>
             ))}
           </div>
@@ -42,10 +50,16 @@ export default function SidebarFilters() {
         
         {isOpenModels && (
             <div className="dropdown-content">
-                <button className="btn-select-all">Select All</button>
+                <button className="btn-select-all" onClick={() => setModels(prev => prev.map(m => ({...m, active: true})))}>
+                  Select All
+                </button>
                 <div className="available-tags-pool">
                 {models.filter(m => !m.active).map(m => (
-                    <span key={m.name} className="tag-pill" style={{ backgroundColor: m.color}}>
+                    <span key={m.name} 
+                          className="tag-pill" 
+                          style={{ backgroundColor: m.color}}
+                          onClick={() => toggleModel(m.name)}
+                    >
                     {m.name}
                     </span>
                 ))}
@@ -60,7 +74,14 @@ export default function SidebarFilters() {
         <div className="select-box" onClick={() => setOpenTopics(!isOpenTopics) }>
           <div className="selected-tags">
             {topics.filter(t => t.active).map(t => (
-              <span key={t.name} className="tag" style={{ backgroundColor: t.color }}>
+              <span key={t.name} 
+                    className="tag" 
+                    style={{ backgroundColor: t.color }}
+                     onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTopic(t.name)
+                     }}
+                    >
                 {t.name} <span className="close-tag material-symbols-outlined">close_small</span>
               </span>
             ))}
@@ -70,10 +91,16 @@ export default function SidebarFilters() {
 
         {isOpenTopics && (
         <div className="dropdown-content">
-            <button className="btn-select-all">Select All</button>
+            <button className="btn-select-all" onClick={() => setTopics(prev => prev.map(t => ({...t, active: true})))}>
+              Select All
+              </button>
                 <div className="available-tags-pool">
                 {topics.filter(t => !t.active).map(t => (
-                <span key={t.name} className="tag-pill" style={{ backgroundColor: t.color}}>
+                <span key={t.name} 
+                      className="tag-pill" 
+                      style={{ backgroundColor: t.color}}
+                      onClick={()=> toggleTopic(t.name)}
+                      >
                 {t.name}
                 </span>
             ))}
