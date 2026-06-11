@@ -30,9 +30,9 @@ class DataRepository:
         clusters = []
 
         count_data = {}
-        MAX_PHRASES_PER_TOPIC = 1200
+        MAX_PHRASES_PER_TOPIC = 2000
         self.total_scanned = 0
-        MAX_LINES_TO_SCAN = 10000000  
+        MAX_LINES_TO_SCAN = 10000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
 
         for line in dataset['clusters']:
             self.total_scanned += 1
@@ -91,11 +91,11 @@ class DataRepository:
     def get_metadata_options(self) -> Dict[str, List[str]]:
             return {
                 "models":sorted(self.galaxy_df['model'].unique().tolist()),
-                "topics":sorted(self.galaxy_df['topic'].unique().tolist()),
+                "topics":sorted(self.galaxy_df['topic'].unique().tolist()),  
                 "stats": {
-                    "total_dataset_scanned": getattr(self, 'total_scanned', 20000000),
+                    "total_dataset_scanned": getattr(self, 'total_scanned', 10000000),
                     "total_embedded_phrases": self.total_cached_points
-                }   
+                }    
             }
         
     def get_filtered_points(self, selected_models: Optional[List[str]], selected_topics: Optional[List[str]]) -> List[Dict[str, Any]]:
