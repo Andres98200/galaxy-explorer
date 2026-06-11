@@ -5,6 +5,14 @@ import SideBarFilters from './components/sideBarFilters'
 import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/services/api.ts'
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
 
+function formatCompactNumber(number: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1
+  }).format(number);
+}
+
 export default function App() {
 
   const [models, setModels] = useState<FilterItem[]>([]);
@@ -12,9 +20,8 @@ export default function App() {
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null); // Remplacement de String par string (meilleure pratique TS)
+  const [error, setError] = useState<string | null>(null);
 
-  // Conserve tes stats globales du backend
   const [globalStats, setGlobalStats] = useState({ totalScanned: 0, totalPhrases: 0 });
 
   useEffect(() => {
@@ -53,26 +60,26 @@ export default function App() {
   const dynamicStats = useMemo(() => {
     return [
       { 
-        title: 'Total Scanned', 
-        value: globalStats.totalScanned.toLocaleString(),
+        title: 'Total Data', 
+        value: formatCompactNumber(globalStats.totalScanned),
         icon: 'analytics', 
         iconColor: '#4F46E5' 
       },
       { 
-        title: 'Total Embedded', 
-        value: globalStats.totalPhrases.toLocaleString(), 
+        title: 'Phrases', 
+        value: formatCompactNumber(globalStats.totalPhrases), 
         icon: 'data_usage', 
         iconColor: '#0EA5E9' 
       },
       { 
-        title: 'Active Models', 
+        title: 'Models', 
         value: models.length, 
         icon: 'cognition_2', 
         iconColor: '#16A34A' 
       },
       { 
-        title: 'Visible Phrases', 
-        value: filteredPoints.length,
+        title: 'Topics', 
+        value: topics.length,
         icon: 'article', 
         iconColor: '#B700FF' 
       }
