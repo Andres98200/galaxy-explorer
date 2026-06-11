@@ -36,7 +36,7 @@ function GalaxyPointsCloud({ points, topics }: GalaxyCanvasProps) {
     const threeColor = new THREE.Color();
 
     points.forEach((point, i) => {
-      const multiplier = 1.2; 
+      const multiplier = 0.8; 
       posArray[i * 3] = point.x * multiplier;
       posArray[i * 3 + 1] = point.y * multiplier;
       posArray[i * 3 + 2] = point.z * multiplier;
@@ -104,7 +104,7 @@ function GalaxyPointsCloud({ points, topics }: GalaxyCanvasProps) {
         <bufferAttribute attach="attributes-color" args={[colorsArray, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.45}
+        size={0.6}
         vertexColors={true}
         sizeAttenuation={true}
         map={circleTexture}
@@ -123,7 +123,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
       {/* 🌟 On place l'info-bulle HTML vide ici. Elle sera pilotée par Three.js */}
       <div id="galaxy-shared-tooltip" className="galaxy-tooltip"></div>
 
-      <Canvas camera={{ position: [0, 0, 15], fov: 60 }}>
+      <Canvas camera={{ position: [20, 20, 30], fov: 70 }}>
         <ambientLight intensity={1.5} />
         
         <GalaxyPointsCloud points={points} topics={topics} />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import StatCard from './components/StatCard'
 import './App.css'
 import SideBarFilters from './components/sideBarFilters'
@@ -6,13 +6,6 @@ import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/s
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
 
 export default function App() {
-
-    const [stats] = useState([
-    { title: 'Total Data', value: '124.2 M', icon: 'data_usage', iconColor: '#4F46E5' },
-    { title: 'Models', value: '142', icon: 'cognition_2', iconColor: '#16A34A' },
-    { title: 'Phrases', value: '14.837', icon: 'article', iconColor: '#B700FF' },
-    { title: 'Topics', value: '182', icon: 'topic', iconColor: '#34DA25'}
-  ])
 
   const [models, setModels] = useState<FilterItem[]>([]);
   const [topics, setTopics] = useState<FilterItem[]>([]);
@@ -29,9 +22,10 @@ export default function App() {
         SetPoints(data.points);
         setLoading(false);
       })
+      
       .catch((err) => {
         console.error(err);
-        setError("Imposible fetching Data...")
+        setError("Imposible fetching Data")
         setLoading(false);
       });
   }, []);
@@ -43,19 +37,47 @@ export default function App() {
     activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
   );
 
+  const dynamicStats = useMemo(() => {
+    const totalData = points.length;
+
+    const numberOfModels = models.length;
+
+    const numberOfPhrases = filteredPoints.length;
+
+    const numberOfTopics = topics.length;
+
+    return [
+    { title: 'Total Data', value: totalData, icon: 'data_usage', iconColor: '#4F46E5' },
+    { title: 'Models', value: numberOfModels, icon: 'cognition_2', iconColor: '#16A34A' },
+    { title: 'Phrases', value: numberOfPhrases, icon: 'article', iconColor: '#B700FF' },
+    { title: 'Topics', value: numberOfTopics, icon: 'topic', iconColor: '#34DA25'}
+    ];
+  }, [points, models, topics, filteredPoints]);
+
   if(loading) {
     return ( 
-      <div className='stat-card'>
-        <h3>Fetching the galaxy Data</h3>
+      <div className="fetching-card">
+        <div className='fetch-icon-wrapped'>
+          <span className='material-symbols-outlined'>directory_sync</span>
+        </div>
+        <span className="fetch-text-container">
+          <h3 className='fetch-title'>Fetching the galaxy Data</h3>
+        </span>
       </div>
     );
   }
 
   if(error) {
     return (
-      <div>
-        <h3>Error fetching the galaxy data</h3>
-        <p>{error}</p>
+      <div className="stat-error-card">
+        <div className='error-icon-wrapper'>
+          <span className="material-symbols-outlined">warning</span>
+        </div>
+
+        <div className='error-text-container'>
+          <h3 className="error-title">Error fetching the galaxy data</h3>
+          <p className="error-message">{error}</p>
+        </div>
       </div>
 
     )
@@ -76,7 +98,7 @@ export default function App() {
       <main className="main-content">
 
         <div className="stats-row">
-          {stats.map((stat, index) => (
+          {dynamicStats.map((stat, index) => (
             <StatCard 
               key={index}
               title={stat.title}
