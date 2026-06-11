@@ -12,7 +12,10 @@ export default function App() {
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<String | null>(null);
+  const [error, setError] = useState<string | null>(null); // Remplacement de String par string (meilleure pratique TS)
+
+  // Conserve tes stats globales du backend
+  const [globalStats, setGlobalStats] = useState({ totalScanned: 0, totalPhrases: 0 });
 
   useEffect(() => {
     fetchDashboardData()
@@ -20,45 +23,67 @@ export default function App() {
         setModels(data.models);
         setTopics(data.topics);
         SetPoints(data.points);
+
+        if (data.stats) {
+          setGlobalStats({
+            totalPhrases: data.stats.total_embedded_phrases,
+            totalScanned: data.stats.total_dataset_scanned
+          });
+        }
         setLoading(false);
       })
-      
       .catch((err) => {
         console.error(err);
-        setError("Imposible fetching Data")
+        setError("Impossible to feth the data");
         setLoading(false);
       });
   }, []);
 
-  const activeModelNames = models.filter(m => m.active).map(m => m.name);
-  const activeTopicNames = topics.filter(t => t.active).map(t => t.name);
+  // Extraction des filtres actifs
+  const activeModelNames = useMemo(() => models.filter(m => m.active).map(m => m.name), [models]);
+  const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
 
-  const filteredPoints = points.filter(point => 
-    activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
-  );
+  // Filtrage des points pour la 3D
+  const filteredPoints = useMemo(() => {
+    return points.filter(point => 
+      activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
+    );
+  }, [points, activeModelNames, activeTopicNames]);
 
   const dynamicStats = useMemo(() => {
-    const totalData = points.length;
-
-    const numberOfModels = models.length;
-
-    const numberOfPhrases = filteredPoints.length;
-
-    const numberOfTopics = topics.length;
-
     return [
-    { title: 'Total Data', value: totalData, icon: 'data_usage', iconColor: '#4F46E5' },
-    { title: 'Models', value: numberOfModels, icon: 'cognition_2', iconColor: '#16A34A' },
-    { title: 'Phrases', value: numberOfPhrases, icon: 'article', iconColor: '#B700FF' },
-    { title: 'Topics', value: numberOfTopics, icon: 'topic', iconColor: '#34DA25'}
+      { 
+        title: 'Total Scanned', 
+        value: globalStats.totalScanned.toLocaleString(),
+        icon: 'analytics', 
+        iconColor: '#4F46E5' 
+      },
+      { 
+        title: 'Total Embedded', 
+        value: globalStats.totalPhrases.toLocaleString(), 
+        icon: 'data_usage', 
+        iconColor: '#0EA5E9' 
+      },
+      { 
+        title: 'Active Models', 
+        value: models.length, 
+        icon: 'cognition_2', 
+        iconColor: '#16A34A' 
+      },
+      { 
+        title: 'Visible Phrases', 
+        value: filteredPoints.length,
+        icon: 'article', 
+        iconColor: '#B700FF' 
+      }
     ];
-  }, [points, models, topics, filteredPoints]);
+  }, [globalStats, models, filteredPoints.length]);
 
-  if(loading) {
+  if (loading) {
     return ( 
       <div className="fetching-card">
-        <div className='fetch-icon-wrapped'>
-          <span className='material-symbols-outlined'>directory_sync</span>
+        <div className='fetch-icon-wrapper'>
+          <span className='material-symbols-outlined spin-animation'>directory_sync</span>
         </div>
         <span className="fetch-text-container">
           <h3 className='fetch-title'>Fetching the galaxy Data</h3>
@@ -67,7 +92,7 @@ export default function App() {
     );
   }
 
-  if(error) {
+  if (error) {
     return (
       <div className="stat-error-card">
         <div className='error-icon-wrapper'>
@@ -79,8 +104,7 @@ export default function App() {
           <p className="error-message">{error}</p>
         </div>
       </div>
-
-    )
+    );
   }
 
   return (
@@ -92,7 +116,7 @@ export default function App() {
           setModels={setModels}
           topics={topics}
           setTopics={setTopics}
-          />
+        />
       </aside>
 
       <main className="main-content">
@@ -115,6 +139,5 @@ export default function App() {
 
       </main>
     </div>
-  )
-
+  );
 }
