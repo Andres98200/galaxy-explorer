@@ -5,6 +5,9 @@ on:
     branches: [ main, master, develop ]
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
 
     commit-lint-check:
@@ -21,10 +24,10 @@ jobs:
           with:
             # Verify if the commit message follows the Conventional Commits standard
             pattern: '^(feat|fix|ci|docs|style|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?: .+'
-            error: '❌ Your commit message does not follow the Conventional Commits standard! Example of a valid message: "feat(frontend): add 3d canvas"'
+            error: '❌ Your commit message does not follow the Conventional Commits standard! Example of a valid message: "feat(example-x): add 3d canvas"'
             excludeDescription: 'true' # Verify only the title of the commit message, not the description
-            excludeTitle: 'true' 
-            checkAllCommitsInTriggeringPush: 'true' 
+            excludeTitle: 'false' 
+            #checkAllCommitsInTriggeringPush: 'true' 
 
 
     # Backend Verification (Python Linting)
