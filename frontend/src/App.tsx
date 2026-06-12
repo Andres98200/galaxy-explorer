@@ -1,25 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import StatCard from './components/StatCard'
 import './App.css'
 import SideBarFilters from './components/sideBarFilters'
 import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/services/api.ts'
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
 
-export default function App() {
+function formatCompactNumber(number: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1
+  }).format(number);
+}
 
-    const [stats] = useState([
-    { title: 'Total Data', value: '124.2 M', icon: 'data_usage', iconColor: '#4F46E5' },
-    { title: 'Models', value: '142', icon: 'cognition_2', iconColor: '#16A34A' },
-    { title: 'Phrases', value: '14.837', icon: 'article', iconColor: '#B700FF' },
-    { title: 'Topics', value: '182', icon: 'topic', iconColor: '#34DA25'}
-  ])
+export default function App() {
 
   const [models, setModels] = useState<FilterItem[]>([]);
   const [topics, setTopics] = useState<FilterItem[]>([]);
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<String | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [globalStats, setGlobalStats] = useState({ totalScanned: 0, totalPhrases: 0 });
 
   useEffect(() => {
     fetchDashboardData()
@@ -27,38 +30,88 @@ export default function App() {
         setModels(data.models);
         setTopics(data.topics);
         SetPoints(data.points);
+
+        if (data.stats) {
+          setGlobalStats({
+            totalPhrases: data.stats.total_embedded_phrases,
+            totalScanned: data.stats.total_dataset_scanned
+          });
+        }
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
-        setError("Imposible fetching Data...")
+        setError("Impossible to feth the data");
         setLoading(false);
       });
   }, []);
 
-  const activeModelNames = models.filter(m => m.active).map(m => m.name);
-  const activeTopicNames = topics.filter(t => t.active).map(t => t.name);
+  // Extraction des filtres actifs
+  const activeModelNames = useMemo(() => models.filter(m => m.active).map(m => m.name), [models]);
+  const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
 
-  const filteredPoints = points.filter(point => 
-    activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
-  );
+  // Filtrage des points pour la 3D
+  const filteredPoints = useMemo(() => {
+    return points.filter(point => 
+      activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
+    );
+  }, [points, activeModelNames, activeTopicNames]);
 
-  if(loading) {
+  const dynamicStats = useMemo(() => {
+    return [
+      { 
+        title: 'Total Data', 
+        value: formatCompactNumber(globalStats.totalScanned),
+        icon: 'analytics', 
+        iconColor: '#4F46E5' 
+      },
+      { 
+        title: 'Phrases', 
+        value: formatCompactNumber(globalStats.totalPhrases), 
+        icon: 'data_usage', 
+        iconColor: '#0EA5E9' 
+      },
+      { 
+        title: 'Models', 
+        value: models.length, 
+        icon: 'cognition_2', 
+        iconColor: '#16A34A' 
+      },
+      { 
+        title: 'Topics', 
+        value: topics.length,
+        icon: 'article', 
+        iconColor: '#B700FF' 
+      }
+    ];
+  }, [globalStats, models, filteredPoints.length]);
+
+  if (loading) {
     return ( 
-      <div className='stat-card'>
-        <h3>Fetching the galaxy Data</h3>
+      <div className="fetching-card">
+        <div className='fetch-icon-wrapper'>
+          <span className='material-symbols-outlined spin-animation'>directory_sync</span>
+        </div>
+        <span className="fetch-text-container">
+          <h3 className='fetch-title'>Fetching the galaxy Data</h3>
+        </span>
       </div>
     );
   }
 
-  if(error) {
+  if (error) {
     return (
-      <div>
-        <h3>Error fetching the galaxy data</h3>
-        <p>{error}</p>
-      </div>
+      <div className="stat-error-card">
+        <div className='error-icon-wrapper'>
+          <span className="material-symbols-outlined">warning</span>
+        </div>
 
-    )
+        <div className='error-text-container'>
+          <h3 className="error-title">Error fetching the galaxy data</h3>
+          <p className="error-message">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -70,13 +123,13 @@ export default function App() {
           setModels={setModels}
           topics={topics}
           setTopics={setTopics}
-          />
+        />
       </aside>
 
       <main className="main-content">
 
         <div className="stats-row">
-          {stats.map((stat, index) => (
+          {dynamicStats.map((stat, index) => (
             <StatCard 
               key={index}
               title={stat.title}
@@ -93,6 +146,5 @@ export default function App() {
 
       </main>
     </div>
-  )
-
+  );
 }
