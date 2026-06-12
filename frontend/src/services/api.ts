@@ -1,8 +1,14 @@
 import { getColorFromString } from "../utils/colors";
 
+export interface DashboardStats {
+    total_dataset_scanned: number;
+    total_embedded_phrases: number;
+}
+
 export interface RawDashboardFilters {
     models: string[];
     topics: string[];
+    stats: DashboardStats;
 }
 
 export interface GalaxyPoints {
@@ -51,7 +57,9 @@ export const fetchDashboardData = async () => {
             active: true
         }));
 
-        return { models, topics, points };
+        const stats = rawFilters.stats;
+
+        return { models, topics, points, stats };
     }catch(error){
         console.error("Erreur API:", error)
         throw error;

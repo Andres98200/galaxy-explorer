@@ -13,6 +13,7 @@ class DataRepository:
             print("Loading galaxy from the cache file...")
             self.galaxy_df = pd.read_parquet(CACHE_FILE)
             print("Galaxy loaded from cache with shape:", self.galaxy_df.shape)
+            self.total_cached_points = len(self.galaxy_df)
             return
         
 
@@ -29,16 +30,16 @@ class DataRepository:
         clusters = []
 
         count_data = {}
-        MAX_PHRASES_PER_TOPIC = 25
-        total_scanned = 0
-        MAX_LINES_TO_SCAN = 5000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
+        MAX_PHRASES_PER_TOPIC = 2000
+        self.total_scanned = 0
+        MAX_LINES_TO_SCAN = 10000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
 
         for line in dataset['clusters']:
-            total_scanned += 1
+            self.total_scanned += 1
             
             # Petit indicateur visuel pour voir que ça avance
-            if total_scanned % 2000 == 0:
-                print(f"Lines scanned: {total_scanned}")
+            if self.total_scanned % 2000 == 0:
+                print(f"Lines scanned: {self.total_scanned}")
 
             topic_line = line.get('topic')
             phrase_line = line.get('factoid') 
@@ -56,7 +57,7 @@ class DataRepository:
                 clusters.append(line.get('cluster'))
                 count_data[topic_line] += 1
             
-            if total_scanned >= MAX_LINES_TO_SCAN:
+            if self.total_scanned >= MAX_LINES_TO_SCAN:
                 print(f"Limite of {MAX_LINES_TO_SCAN} lines scanned reached, stopping the data collection.")
                 break
 
@@ -81,6 +82,8 @@ class DataRepository:
         self.galaxy_df['cluster'] = self.galaxy_df['cluster'].fillna(-1).astype(int)
         print("3D galaxy dataframe created with shape:", self.galaxy_df.shape)
 
+        self.total_cached_points = len(self.galaxy_df)
+
         print(f"Saving data on the cache file {CACHE_FILE} for faster loading")
         self.galaxy_df.to_parquet(CACHE_FILE)
         print("Data saved to cache successfully.")
@@ -88,7 +91,11 @@ class DataRepository:
     def get_metadata_options(self) -> Dict[str, List[str]]:
             return {
                 "models":sorted(self.galaxy_df['model'].unique().tolist()),
-                "topics":sorted(self.galaxy_df['topic'].unique().tolist()),   
+                "topics":sorted(self.galaxy_df['topic'].unique().tolist()),  
+                "stats": {
+                    "total_dataset_scanned": getattr(self, 'total_scanned', 10000000),
+                    "total_embedded_phrases": self.total_cached_points
+                }    
             }
         
     def get_filtered_points(self, selected_models: Optional[List[str]], selected_topics: Optional[List[str]]) -> List[Dict[str, Any]]:
