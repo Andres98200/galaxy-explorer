@@ -169,8 +169,6 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 
 .content-grid {
   flex: 1;
-  background-color: var(--bg-card);
-  box-shadow: var(--shadow);
   border-radius: 15px;
   height: 100%;
 }
@@ -380,6 +378,10 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   position: relative;
 }
 
+.galaxy-container-grid{
+  overflow: hidden;
+
+}
 
 .tag-text {
   white-space: nowrap;
@@ -388,4 +390,41 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   flex-grow: 1;             
   text-align: left;         
   padding-right: 8px;       
+}
+
+.galaxy-tooltip {
+  background-color: var(--bg-card);
+  border-radius: 15px;
+  padding: 14px;
+  max-width: 450px;
+  z-index: 999;
+  text-align: left;
+  border: 2px solid var(--bg);
+  box-shadow: var(--shadow);
+  
+}
+
+.tooltip-meta-line {
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #334155;
+}
+
+.tooltip-meta-line strong {
+  font-weight: 700;
+  color: var(--text);
+}
+.tooltip-meta-line span {
+  font-style: italic;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.tooltip-phrase {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
 }
