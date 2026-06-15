@@ -110,7 +110,68 @@ class DataRepository:
             
         df_temp = df_temp.reset_index().rename(columns={'index': 'id'})
         return df_temp.to_dict(orient="records")
+    
+    def get_point_details(self, point_id: int) -> Dict[str, Any]:
 
+        if point_id not in self.galaxy_df.index:
+            return {"error": "Point not found"}
+        
+        target_point = self.galaxy_df.loc[point_id]
+        
+        # 🪄 Sécurité : On force la conversion en int et on gère le NaN au cas où
+        try:
+            target_cluster = int(target_point['cluster']) if pd.notna(target_point['cluster']) else -1
+        except (ValueError, TypeError):
+            target_cluster = -1
+            
+        target_topic = target_point['topic']
+
+        # TOP related phrases
+        # 🪄 Sécurité ici aussi : On s'assure de filtrer correctement les types
+        if target_cluster != -1:
+            cluster_df = self.galaxy_df[self.galaxy_df['cluster'].astype(float).astype(int) == target_cluster]
+        else:
+            cluster_df = self.galaxy_df[self.galaxy_df['topic'] == target_topic]
+
+        # Si le filtre n'a rien renvoyé par sécurité, on prend le topic global
+        if cluster_df.empty:
+            cluster_df = self.galaxy_df[self.galaxy_df['topic'] == target_topic]
+
+        phrases_list = []
+        for idx, row in cluster_df.head(6).iterrows():
+            dist = float(((row['x'] - target_point['x'])**2 + (row['y'] - target_point['y'])**2 + (row['z'] - target_point['z'])**2)**0.5)
+            score = max(1, min(100, int(100 / (1 + dist))))
+            phrases_list.append({
+                "phrase": row['phrase'],  
+                "score": score
+            })
+        phrases_list = sorted(phrases_list, key=lambda x: x['score'], reverse=True)
+
+        # Model attribution
+        model_counts = cluster_df['model'].value_counts()
+        total_models = len(cluster_df) if len(cluster_df) > 0 else 1 # Évite la division par zéro
+        model_list = []
+        for model_name, count in model_counts.items():
+            model_list.append({
+                "name": str(model_name),
+                "percentage": int((count / total_models * 100))
+            })
+
+        # Nearest neighbors
+        topic_counts = cluster_df['topic'].value_counts()
+        total_topics = len(cluster_df) if len(cluster_df) > 0 else 1 # Évite la division par zéro
+        neighbors_list = []
+        for topic_name, count in topic_counts.items():
+            neighbors_list.append({
+                "name": f"Cluster {target_cluster} ({topic_name})" if target_cluster != -1 else str(topic_name),
+                "percentage": int((count / total_topics) * 100)
+            })
+        
+        return {
+            "phrases": phrases_list,
+            "models": model_list,
+            "neighbors": neighbors_list
+        }
 
 
 
