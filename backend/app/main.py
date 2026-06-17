@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from app.repositories.data_repository import DataRepository
@@ -39,3 +39,11 @@ def get_points(
 ):
     """Returns the filtered 3D points"""
     return repo.get_filtered_points(selected_models=models, selected_topics=topics)
+
+@app.get("/api/points/{point_id}/details")
+def get_point_details(point_id: int):
+    details = repo.get_point_details(point_id)
+
+    if "error" in details:
+        raise HTTPException(status_code = 404, detail=details["error"])
+    return details 
