@@ -431,19 +431,19 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 
 .details-panel-container {
   position: absolute;
-  top: 0;
+  top: 24px;
   right: 0;
   width: 500px;
-  max-height: fit-content;
+  max-height: 100%;   
   text-align: center;
   transform: translateX(100%);
   animation: slideInFromRight 0.35s ease-out forwards;
   background-color: var(--bg-card);
   border-radius: 15px;
-  padding: 14px;
+  padding: 25px;
   border: 2px solid var(--bg);
   box-shadow: var(--shadow);
-  z-index: 999; /*the table is over the tooltip*/
+  z-index: 999;
 }
 
 @keyframes slideInFromRight {
@@ -452,9 +452,9 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 }
 
 .panel-title {
-  font-weight: 700;
+  font-weight: 600;
   text-align: left;
-  font-size: larger;
+  font-size: 1rem;
   display: flex;
   justify-content: space-between;
   padding-bottom: 20px;
@@ -475,7 +475,10 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   border-spacing: 0;
   text-align: left;
   overflow: hidden;
+  width: 100%;
+  cursor: text;
 }
+
 .panel-table th {
   font-weight: 600;
   border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
@@ -532,13 +535,16 @@ tr:nth-child(even) {
   border: 1px solid var(--border);
   padding-left: 10px;
   padding-bottom: 10px;
-   overflow-y: auto;
+  overflow-y: auto;
+  cursor:help;
 }
 
 .neighbor-section {
   padding-top: 20px;
   display: flex;
   flex-direction: column;
+  min-height: 42px;
+  max-height: 240px;
 }
 
 .bar-label-line {
@@ -570,18 +576,48 @@ tr:nth-child(even) {
 }
 
 
-.attribution-section::-webkit-scrollbar{
+.panel-bars-list::-webkit-scrollbar, .panel-neighbor-list::-webkit-scrollbar{
   width: 8px;
-
 }
 
-.panel-bars-list::-webkit-scrollbar-thumb{
+.panel-bars-list::-webkit-scrollbar-thumb, .panel-neighbor-list::-webkit-scrollbar-thumb{
   background: #cbd5e1;
-  border-radius: 4px;
   cursor: pointer;
-  
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
+.neighbors-name {
+  display: flex;
+  padding-top: 5px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  cursor: help;
+  font-style: italic;
+  justify-content: space-between;
+}
 
+.neighbors-name span {
+  padding-right: 20px;
+  font-weight: 500;
+}
+
+.neighbors-name:hover {
+  background-color: rgba(26, 129, 247, 0.07);
+}
+
+.panel-neighbor-list {
+  border-radius: 15px;
+  border: 1px solid var(--border);
+  padding-bottom: 10px;
+  overflow-y: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.neighbors-name strong {
+  padding-left: 15px;
+}
 
 

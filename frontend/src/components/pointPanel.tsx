@@ -41,14 +41,14 @@ export default function PointDetailsPanel ({
                 <thead>
                     <tr className="table-titles">
                         <th className="phrases-title">Phrases</th>
-                        <th className="score-title">Score</th>
+                        <th className="score-title">Similarity</th>
                     </tr>
                 </thead>
                 <tbody>
                     {phrases.map((item, index) => (
                         <tr key={index} className="table-titles">
                             <td className="text">{item.phrase}</td>
-                            <td className="score">{item.score}</td>
+                            <td className="score">{item.score}%</td>
                         </tr>
                     ))}
                 </tbody>
@@ -83,12 +83,12 @@ export default function PointDetailsPanel ({
             {/*Section Neighboor */}
         <div className="neighbor-section">
             <div className="neighbor-section-title">Nearest neighbors</div>
-                <div className="panel-bar-list">
+                <div className="panel-neighbor-list">
                     {neighbors.map((cluster, index) => (
-                        <div key={index} className="bar-row">
-                            <div className="bar-lable-line">
+                        <div key={index} className="">
+                            <div className="neighbors-name">
                                 <strong>{cluster.name}</strong>
-                                <span>{cluster.percentage}%</span>
+                                <span>#{index + 1}</span>
                             </div>
                         </div>
                     ))}
