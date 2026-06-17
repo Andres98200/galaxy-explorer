@@ -28,6 +28,27 @@ export interface FilterItem {
     active: boolean;
 }
 
+export interface ModelBar {
+    name: string;
+    percentage: number;
+}
+
+export interface ClusterBar {
+    name: string;
+    percentage: number;
+}
+
+export interface PhraseItem {
+    phrase: string;
+    score: number;
+}
+
+export interface PointDetailsResponse {
+    phrases: PhraseItem[];
+    models: ModelBar[];
+    neighbors: ClusterBar[];
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export const fetchDashboardData = async () => {
     try {
@@ -62,6 +83,22 @@ export const fetchDashboardData = async () => {
         return { models, topics, points, stats };
     }catch(error){
         console.error("Erreur API:", error)
+        throw error;
+    }
+};
+
+export const fetchPointDetails = async (pointId: number): Promise<PointDetailsResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/points/${pointId}/details`);
+
+        if (!response.ok) {
+            throw new Error(`Erreur lors de la récupération des détails (Status: ${response.status})`);
+        }
+
+        const data: PointDetailsResponse = await response.json();
+        return data;
+    } catch (error) {
+        console.error(`Erreur API sur les détails du point ${pointId}:`, error);
         throw error;
     }
 };
