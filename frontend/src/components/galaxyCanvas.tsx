@@ -191,7 +191,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     };
 
     return (
-    <div className="galaxy-canvas-wrapper" style={{ display: 'flex', width: '100%', height: '100%', position: 'relative' }}>
+    <div className="galaxy-canvas-wrapper">
         {hoveredInfo && (
             <div className='galaxy-tooltip'
                  style={{
@@ -219,7 +219,6 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         )}
 
       {/* Conteneur principal pour le Canvas 3D */}
-      <div style={{ flex: 1, height: '100%' }}>
         <Canvas camera={{ position: [40, 40, 30], fov: 70 }}>
           <ambientLight intensity={1.5} />
           
@@ -238,14 +237,16 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             minDistance={3}
           />
         </Canvas>
-      </div>
 
       {/* 🌟 Intégration de l'affichage du panneau latéral droit */}
       {selectedPoint && (
-        <div style={{ padding: '10px', height: '100%', display: 'flex', alignItems: 'center', zIndex: 20 }}>
+        <div className='details-panel-container'>
           {isLoadingDetails ? (
-            <div className="details-panel-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '350px' }}>
-              <span style={{ color: '#9ca3af' }}>Chargement des données...</span>
+            <div>
+              <span className=''>
+                 <span className='material-symbols-outlined spin-animation'>directory_sync</span>
+              </span>
+
             </div>
           ) : (
             panelData && (

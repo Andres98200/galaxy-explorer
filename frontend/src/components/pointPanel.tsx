@@ -30,25 +30,25 @@ export default function PointDetailsPanel ({
     neighbors = []
 }: PointDetailsPanelProps) {
     return (
-        <div className="details-panel-container">
+        <div className="Points-panel">
 
             {/* Partie du tableau dans le container*/}
-            <div className="pannel-title">
+            <div className="panel-title">
                 <span>Top reletated Phrases</span>
+                <span onClick={onClose} className="panel-close-btn material-symbols-outlined">close_small</span>
             </div>
-            <button onClick={onClose} className="panel-close-btn"></button>
-            <table className="panel-phrases-table">
+            <table className="panel-table">
                 <thead>
-                    <tr>
-                        <th>Phrase</th>
-                        <th>Score</th>
+                    <tr className="table-titles">
+                        <th className="phrases-title">Phrases</th>
+                        <th className="score-title">Score</th>
                     </tr>
                 </thead>
                 <tbody>
                     {phrases.map((item, index) => (
-                        <tr key={index}>
-                            <td className="truncate-text">{item.phrase}</td>
-                            <td>{item.score}</td>
+                        <tr key={index} className="table-titles">
+                            <td className="text">{item.phrase}</td>
+                            <td className="score">{item.score}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -56,31 +56,33 @@ export default function PointDetailsPanel ({
 
             {/*Partie Attribution */}
 
-            <div className="attribution-title">Attribution</div>
-            <div className="panel-bars-list">
-                {models.map((model, index) => (
-                    <div key={index} className="bar-row">
-                        <div className="bar-label-line">
-                            <strong>{model.name}</strong>
-                            <span>{model.percentage}%</span>
+            <div className="attribution-section">
+                <div className="attribution-title">Attribution</div>
+                <div className="panel-bars-list">
+                    {models.map((model, index) => (
+                        <div key={index} className="bar-row">
+                            <div className="bar-label-line">
+                                <strong className="panel-model-name">{model.name}</strong>
+                                <span className="panel-model-percentage">{model.percentage}%</span>
+                            </div>
+                            <div className="bar-track">
+                                <div 
+                                    className="bar-fill"
+                                    style={{
+                                        width: `${model.percentage}%`,
+                                        backgroundColor: activeColor,
+                                        height: '100%',
+                                        transition: 'width 0.3s ease' 
+                                    }}></div>
+                            </div>
                         </div>
-                        <div className="bar-track">
-                            <div 
-                                className="bar-fill"
-                                style={{
-                                    width: `${model.percentage}%`,
-                                    backgroundColor: activeColor,
-                                    height: '100%',
-                                    transition: 'width 0.3s ease' 
-                                }}></div>
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
             {/*Section Neighboor */}
-
-            <div className="neighbor-section-title">Nerest neighbors</div>
+        <div className="neighbor-section">
+            <div className="neighbor-section-title">Nearest neighbors</div>
                 <div className="panel-bar-list">
                     {neighbors.map((cluster, index) => (
                         <div key={index} className="bar-row">
@@ -92,5 +94,6 @@ export default function PointDetailsPanel ({
                     ))}
                 </div>
         </div>
+    </div>
     );
 }
