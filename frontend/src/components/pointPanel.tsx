@@ -57,7 +57,7 @@ export default function PointDetailsPanel ({
             {/*Partie Attribution */}
 
             <div className="attribution-section">
-                <div className="attribution-title">Attribution</div>
+                <div className="attribution-title">Model Distribution</div>
                 <div className="panel-bars-list">
                     {models.map((model, index) => (
                         <div key={index} className="bar-row">

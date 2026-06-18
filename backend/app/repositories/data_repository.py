@@ -118,7 +118,6 @@ class DataRepository:
         
         target_point = self.galaxy_df.loc[point_id]
         
-        # 🪄 Sécurité : On force la conversion en int et on gère le NaN au cas où
         try:
             target_cluster = int(target_point['cluster']) if pd.notna(target_point['cluster']) else -1
         except (ValueError, TypeError):
@@ -127,13 +126,11 @@ class DataRepository:
         target_topic = target_point['topic']
 
         # TOP related phrases
-        # 🪄 Sécurité ici aussi : On s'assure de filtrer correctement les types
         if target_cluster != -1:
             cluster_df = self.galaxy_df[self.galaxy_df['cluster'].astype(float).astype(int) == target_cluster]
         else:
             cluster_df = self.galaxy_df[self.galaxy_df['topic'] == target_topic]
 
-        # Si le filtre n'a rien renvoyé par sécurité, on prend le topic global
         if cluster_df.empty:
             cluster_df = self.galaxy_df[self.galaxy_df['topic'] == target_topic]
 
@@ -149,7 +146,7 @@ class DataRepository:
 
         # Model attribution
         model_counts = cluster_df['model'].value_counts()
-        total_models = len(cluster_df) if len(cluster_df) > 0 else 1 # Évite la division par zéro
+        total_models = len(cluster_df) if len(cluster_df) > 0 else 1
         model_list = []
         for model_name, count in model_counts.items():
             model_list.append({
@@ -158,20 +155,43 @@ class DataRepository:
             })
 
         # Nearest neighbors
-        topic_counts = cluster_df['topic'].value_counts()
-        total_topics = len(cluster_df) if len(cluster_df) > 0 else 1 # Évite la division par zéro
+        cluster_centers = self.galaxy_df.groupby('cluster')[['x','y','z']].mean() # calculate the center of the galaxy 
+        
         neighbors_list = []
-        for topic_name, count in topic_counts.items():
+        for cid, center in cluster_centers.iterrows(): # calculate distance between our selected point and the center of all clusters
+            if cid == target_cluster or cid == -1:
+                continue
+
+            dist = float(((center['x'] - target_point['x'])**2 +
+                          (center['y'] - target_point['y'])**2 +
+                          (center['z'] - target_point['z'])**2)**0.5)
+            
+            majority_topic = self.galaxy_df[self.galaxy_df['cluster'] == cid]['topic'].mode()
+            topic_label = majority_topic.iloc[0] if not majority_topic.empty else "Uknown Topic"
+
             neighbors_list.append({
-                "name": f"Cluster {target_cluster} ({topic_name})" if target_cluster != -1 else str(topic_name),
-                "percentage": int((count / total_topics) * 100)
+                "id": int(cid),
+                "topic": topic_label,
+                "distance": dist
+            })
+
+        neighbors_list = sorted(neighbors_list, key=lambda x: x['distance'])
+
+        formatted_neighbors = []
+        for item in neighbors_list[:5]:
+            formatted_neighbors.append({
+                "name": f"Neighbor : {item['id']} ({item['topic']})",
+                "percentage": int(item['distance'])
             })
         
         return {
             "phrases": phrases_list,
             "models": model_list,
-            "neighbors": neighbors_list
+            "neighbors": formatted_neighbors
         }
+
+
+            
 
 
 
