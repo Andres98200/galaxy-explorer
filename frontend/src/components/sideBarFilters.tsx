@@ -30,11 +30,9 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
         <div className="select-box" onClick={() => setOpenModels(!isOpenModels)}>
           <div className="selected-tags">
             {models.filter(m => m.active).map(m => (
-              /* Retrait du background color forcé sur la ligne */
               <div key={m.name} className="tag" style={{ '--tag-color': m.color } as React.CSSProperties}>
                 <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
                 
-                {/* Le texte est enveloppé ici pour couper si c'est trop long */}
                 <span className="tag-text" onClick={(e) => {
                   e.stopPropagation();
                   toggleModel(m.name);
@@ -51,9 +49,20 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
               </div>
             ))}
           </div>
-          <span className={`drop-down-arrow material-symbols-outlined ${isOpenModels ? 'open' : ''}`}>
-            keyboard_arrow_down
-          </span>
+
+            <div className='filter-buttons'>
+              {models.some(m => m.active) && (
+                <span className='btn-deselect-all material-symbols-outlined'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModels(prev => prev.map(m => ({...m, active:false})))}}
+                    >cancel
+                </span>
+              )}
+              <span className={`drop-down-arrow material-symbols-outlined ${isOpenModels ? 'open' : ''}`}>
+                keyboard_arrow_up
+              </span>
+          </div>
         </div>
         
         {isOpenModels && (
@@ -98,9 +107,20 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
               </div>
             ))}
           </div>
-          <span className={`drop-down-arrow material-symbols-outlined ${isOpenTopics ? 'open' : ''}`}>
-            keyboard_arrow_down
-          </span>
+            
+            <div className='filter-buttons'>
+              {topics.some(t => t.active) && (
+                <span className='btn-deselect-all material-symbols-outlined'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTopics(prev => prev.map(t => ({...t, active:false})))}}
+                    >cancel
+                </span>
+              )}
+              <span className={`drop-down-arrow material-symbols-outlined ${isOpenTopics ? 'open' : ''}`}>
+                keyboard_arrow_up
+              </span>
+            </div>
         </div>
 
         {isOpenTopics && (
