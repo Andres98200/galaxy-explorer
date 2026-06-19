@@ -631,3 +631,6 @@ tr:nth-child(even) {
   justify-content: center; 
 }
 
+.btn-deselect-all:hover {
+  transform: scale(1.1);
+}

@@ -30,10 +30,11 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
         <div className="select-box" onClick={() => setOpenModels(!isOpenModels)}>
           <div className="selected-tags">
             {models.filter(m => m.active).map(m => (
-              <div key={m.name} className="tag" style={{ '--tag-color': m.color } as React.CSSProperties}>
+              <div key={m.name} className="tag" title={m.name} style={{ '--tag-color': m.color } as React.CSSProperties}>
                 <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
                 
-                <span className="tag-text" onClick={(e) => {
+                <span className="tag-text"
+                  onClick={(e) => {
                   e.stopPropagation();
                   toggleModel(m.name);
                 }}>
@@ -72,7 +73,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
                 </button>
                 <div className="available-tags-pool">
                 {models.filter(m => !m.active).map(m => (
-                    <div key={m.name} className="tag-pill" onClick={() => toggleModel(m.name)}>
+                    <div key={m.name} className="tag-pill" title={m.name} onClick={() => toggleModel(m.name)}>
                       <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
                       <span className="tag-text">{m.name}</span>
                     </div>
@@ -88,7 +89,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
         <div className="select-box" onClick={() => setOpenTopics(!isOpenTopics)}>
           <div className="selected-tags">
             {topics.filter(t => t.active).map(t => (
-              <div key={t.name} className="tag" style={{ '--tag-color': t.color } as React.CSSProperties}>
+              <div key={t.name} className="tag" title={t.name} style={{ '--tag-color': t.color } as React.CSSProperties}>
                 <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
                 
                 <span className="tag-text" onClick={(e) => {
@@ -130,7 +131,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
             </button>
             <div className="available-tags-pool">
                 {topics.filter(t => !t.active).map(t => (
-                <div key={t.name} className="tag-pill" onClick={() => toggleTopic(t.name)}>
+                <div key={t.name} className="tag-pill" title={t.name} onClick={() => toggleTopic(t.name)}>
                   <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
                   <span className="tag-text">{t.name}</span>
                 </div>
