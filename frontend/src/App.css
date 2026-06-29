@@ -213,7 +213,6 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   max-height: 240px; 
   box-sizing: border-box;
   transition: border-color 0.2s, box-shadow 0.2s;
-  cursor: pointer;
   align-items: center;
 }
 
@@ -228,8 +227,10 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   flex-wrap: wrap;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
   white-space: nowrap;
   padding-right: 8px;
+  cursor: pointer;
 }
 
 .selected-tags::-webkit-scrollbar, 
@@ -285,6 +286,20 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   transition: color 0.15s;
   display: flex;
   align-items: center;
+}
+
+.close-research{
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--info-text);
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+}
+
+.close-research:hover {
+  color: var(--text);
 }
 
 .close-tag:hover, .panel-close-btn:hover, .btn-deselect-all:hover{
@@ -633,4 +648,43 @@ tr:nth-child(even) {
 
 .btn-deselect-all:hover {
   transform: scale(1.1);
+}
+
+.search-input {
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 600;
+  background-color: var(--bg);
+  cursor: pointer;
+  align-items: center;
+  border: none;
+  cursor: text;
+  outline: none;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.empty-state {
+  color: var(--info-text);
+  font-weight: 600;
+  font-size: 0.8rem;
+  width: 100%;
+  text-align: center;
+}
+
+.search-input::placeholder {
+  color: var(--info-text);
+  display: inline-block;
+  animation: placeholderFadeIn 0.4s ease-out forwards;
+}
+
+@keyframes placeholderFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
