@@ -47,3 +47,13 @@ def get_point_details(point_id: int):
     if "error" in details:
         raise HTTPException(status_code = 404, detail=details["error"])
     return details 
+
+@app.get("/api/points/{point_id}/source-text")
+def get_point_source_text(point_id: int):
+    """Returns the original text and prompt"""
+    source_data = repo. get_points_source_text(point_id)
+
+    if "error" in source_data:
+        raise HTTPException(status_code=404, detail=source_data["error"])
+        
+    return source_data
