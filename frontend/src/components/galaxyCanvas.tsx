@@ -4,7 +4,8 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import PointDetailsPanel from './pointPanel';
-import { type GalaxyPoints, type FilterItem, fetchPointDetails } from '../services/api';
+import { type GalaxyPoints, type FilterItem, fetchPointDetails, fetchSourceTextData, type SourceTextData } from '../services/api';
+import SourceTextPanel from './SourceTextPanel';
 
 interface GalaxyCanvasProps {
   points: GalaxyPoints[];
@@ -159,6 +160,9 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     const [panelData, setPanelData] = useState<{ phrases: any[], models: any[], neighbors: any[] } | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
 
+    const [sourceTextData, setSourceTextData] = useState<SourceTextData | null>(null);
+    const [isLoadingText, setIsLoadingText] = useState<boolean>(false);
+    
     const handleHover = (point: GalaxyPoints, x: number, y: number) => {
         setHoveredInfo({ point, x, y});
         document.body.style.cursor = 'pointer';
@@ -179,14 +183,24 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         setSelectedPoint(point);
         setIsLoadingDetails(true);
         setPanelData(null);
+        setIsLoadingText(true);
 
         try {
             const data = await fetchPointDetails(point.id);
             setPanelData(data);
         } catch (error) {
-            console.error("Erreur lors de la récupération des détails :", error);
+            console.error("Error fetching the point details :", error);
         } finally {
             setIsLoadingDetails(false);
+        }
+
+        try {
+            const textData = await fetchSourceTextData(point.id);
+            setSourceTextData(textData)
+        } catch (error) {
+            console.log("Error fetching the original prompt and details :", error);
+        } finally {
+          setIsLoadingText(false);
         }
     };
 
@@ -259,6 +273,30 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
                 phrases={panelData.phrases}
                 models={panelData.models}
                 neighbors={panelData.neighbors}
+              />
+            )
+          )}
+        </div>
+      )}
+      
+      {selectedPoint && (
+        <div className="details-panel-container-2"> 
+          {isLoadingText ? (
+            <div className="">
+              <span className="material-symbols-outlined spin-animation">directory_sync</span>
+            </div>
+          ) : (
+            sourceTextData && (
+              <SourceTextPanel
+                onClose={()=> {
+                  setSelectedPoint(null);
+                  setSourceTextData(null);
+                }}
+                selectedPointId={selectedPoint.id}
+                model={selectedPoint.model}
+                topic={selectedPoint.topic}
+                original_prompt={sourceTextData.original_prompt}
+                full_response={sourceTextData.full_response}
               />
             )
           )}

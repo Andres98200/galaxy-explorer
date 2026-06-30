@@ -469,6 +469,24 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   to { transform: translateX(0); opacity: 1; }
 }
 
+.details-panel-container-2 {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  width: 500px;
+  max-height: 100%;   
+  text-align: center;
+  transform: translateX(100%);
+  animation: slideInFromRight 0.35s ease-out forwards;
+  background-color: var(--bg-card);
+  border-radius: 15px;
+  padding: 25px;
+  border: 2px solid var(--bg);
+  box-shadow: var(--shadow);
+  z-index: 999;
+}
+
+
 .panel-title {
   font-weight: 600;
   text-align: left;
