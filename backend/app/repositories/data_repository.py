@@ -28,11 +28,12 @@ class DataRepository:
         topics = []
         models = []
         clusters = []
+        prompt_indices = []
 
         count_data = {}
         MAX_PHRASES_PER_TOPIC = 2000
         self.total_scanned = 0
-        MAX_LINES_TO_SCAN = 10000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
+        MAX_LINES_TO_SCAN = 12000000  # Limite pour éviter de scanner tout le dataset en streaming (ajustable)
 
         for line in dataset['clusters']:
             self.total_scanned += 1
@@ -55,6 +56,7 @@ class DataRepository:
                 topics.append(topic_line)
                 models.append(line.get('model_id'))
                 clusters.append(line.get('cluster'))
+                prompt_indices.append(line.get('prompt_index'))
                 count_data[topic_line] += 1
             
             if self.total_scanned >= MAX_LINES_TO_SCAN:
@@ -75,6 +77,7 @@ class DataRepository:
             'topic': topics,
             'model': models,
             'cluster': clusters,
+            'prompt_index': prompt_indices,
             'x': embeddings_3d[:, 0],
             'y': embeddings_3d[:, 1],
             'z': embeddings_3d[:, 2]
@@ -93,7 +96,7 @@ class DataRepository:
                 "models":sorted(self.galaxy_df['model'].unique().tolist()),
                 "topics":sorted(self.galaxy_df['topic'].unique().tolist()),  
                 "stats": {
-                    "total_dataset_scanned": getattr(self, 'total_scanned', 10000000),
+                    "total_dataset_scanned": getattr(self, 'total_scanned', 12000000),
                     "total_embedded_phrases": self.total_cached_points
                 }    
             }
@@ -189,6 +192,31 @@ class DataRepository:
             "models": model_list,
             "neighbors": formatted_neighbors
         }
+    
+    def get_points_source_text(self, point_id: int) -> Dict[str, Any]:
+        if point_id not in self.galaxy_df.index:
+            return {"error": "Point not found"}
+        
+        target_point = self.galaxy_df.loc[point_id]
+        target_prompt_index = target_point.get('prompt_index')
+
+        if target_prompt_index is None:
+            return {"Error": "No prompt index linked to this point"}
+        
+        print(f"Streaming 'full_responses' dataset to find prompt_index: {target_prompt_index}...")
+
+        responses_dataset = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', streaming=True)
+
+        for line in responses_dataset['full_responses']:
+            if line.get('prompt_index') == int(target_prompt_index):
+                return {
+                    "model": str(target_point['model']),
+                    "topic": str(target_point['topic']),
+                    "original_prompt": line.get('user_prompt', 'No prompt available'),
+                    "full_response": line.get('text', 'No text available')            
+                }
+                
+        return {"error": "Text context not found in source dataset"}
 
 
             
