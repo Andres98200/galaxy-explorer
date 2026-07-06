@@ -730,7 +730,7 @@ tr:nth-child(even) {
     padding: 6px 10px;
     border-radius: 10px;
     font-size: 0.9rem;
-    max-width: 300px;
+    max-width: 200px;
     font-style: italic;
     transition: all 0.2s ease;
 }
