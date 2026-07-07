@@ -20,7 +20,6 @@ export interface GalaxyPoints {
     x: number;
     y: number;
     z: number;
-    can_color_by_cluster: boolean;
 }
 
 export interface FilterItem {

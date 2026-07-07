@@ -133,20 +133,17 @@ class DataRepository:
         
     def get_filtered_points(self, selected_models: Optional[List[str]], selected_topics: Optional[List[str]]) -> List[Dict[str, Any]]:
         df_temp = self.galaxy_df.copy()
+        
         if selected_models:
             df_temp = df_temp[df_temp['model'].isin(selected_models)]
         if selected_topics:
             df_temp = df_temp[df_temp['topic'].isin(selected_topics)]
-            
-        # 🎨 TICKET #27 : La coloration par cluster est autorisée uniquement si 1 seul topic est actif
-        single_topic_mode = (selected_topics is not None and len(selected_topics) == 1)
         
         points = df_temp.to_dict(orient="records")
         for p in points:
             p['cluster'] = int(p['cluster']) if pd.notna(p['cluster']) else -1
-            p['can_color_by_cluster'] = single_topic_mode
             
-        return points
+        return points   
     
     def get_point_details(self, point_id: int) -> Dict[str, Any]:
         matched_points = self.galaxy_df[self.galaxy_df['id'] == point_id]

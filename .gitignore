@@ -9,6 +9,7 @@ __pycache__/
 
 # Ignorer les fichiers de cache
 galaxy_cache.parquet
+responses_cache.parquet
 
 # Ignorer les fichiers .env
 .env
