@@ -23,7 +23,7 @@ jobs:
           uses: gsactions/commit-message-checker@v2
           with:
             # Verify if the commit message follows the Conventional Commits standard
-            pattern: '^(feat|fix|ci|docs|style|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?: .+'
+            pattern: '^(feat|fix|ci|docs|style|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?: .+|^Merge pull request .+'
             error: '❌ Your commit message does not follow the Conventional Commits standard! Example of a valid message: "feat(example-x): add 3d canvas"'
             excludeDescription: 'true' # Verify only the title of the commit message, not the description
             excludeTitle: 'false' 
