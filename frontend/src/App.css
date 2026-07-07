@@ -735,7 +735,7 @@ tr:nth-child(even) {
     transition: all 0.2s ease;
 }
 
-.original-info-tag:hover, .original-prompt-box:hover {
+.original-info-tag:hover {
     background-color: rgba(26, 129, 247, 0.07);
     transform: scale(1.02);
 }
@@ -765,23 +765,27 @@ tr:nth-child(even) {
     color: #334155;
     transition: all 0.2s ease;
     cursor: help;
+    max-height: 150px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
 }
 
 .original-response-box {
     font-size: 0.88rem;
     white-space: pre-line;
-    overflow-y: auto;
+    overflow-y:auto;
     max-height: 600px;
     padding-right: 10px;
     cursor: text;
     font-style: italic;
 }
 
-.original-response-box::-webkit-scrollbar{
+.original-response-box::-webkit-scrollbar, .original-prompt-box::-webkit-scrollbar {
    width: 5px;
 }
 
-.original-response-box::-webkit-scrollbar-thumb{
+.original-response-box::-webkit-scrollbar-thumb, .original-prompt-box::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   cursor: pointer;
   border-radius: 20px;
