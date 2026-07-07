@@ -49,7 +49,15 @@ export interface PointDetailsResponse {
     neighbors: ClusterBar[];
 }
 
+export interface SourceTextData {
+    model: string;
+    topic: string;
+    original_prompt: string;
+    full_response: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export const fetchDashboardData = async () => {
     try {
         const filtersRes = await fetch(`${API_BASE_URL}/api/meta`)
@@ -102,3 +110,19 @@ export const fetchPointDetails = async (pointId: number): Promise<PointDetailsRe
         throw error;
     }
 };
+
+export const fetchSourceTextData = async (pointId: number): Promise<SourceTextData> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/points/${pointId}/source-text`);
+
+        if (!response.ok) {
+            throw new Error(`Error requesting the point source text (Status: ${response.status})`);
+        }
+
+        const data: SourceTextData = await response.json();
+        return data;
+    } catch (error) {
+        console.error(`API error fetching the point source text ${pointId}:`, error);
+        throw error;
+    }
+}

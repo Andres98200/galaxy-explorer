@@ -1,10 +1,10 @@
-
 import { useRef, useMemo, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import PointDetailsPanel from './pointPanel';
-import { type GalaxyPoints, type FilterItem, fetchPointDetails } from '../services/api';
+import { type GalaxyPoints, type FilterItem, fetchPointDetails, fetchSourceTextData, type SourceTextData } from '../services/api';
+import SourceTextPanel from './SourceTextPanel';
 
 interface GalaxyCanvasProps {
   points: GalaxyPoints[];
@@ -12,9 +12,9 @@ interface GalaxyCanvasProps {
 }
 
 interface HoveredInfo {
-    point: GalaxyPoints;
-    x: number;
-    y: number;
+  point: GalaxyPoints;
+  x: number;
+  y: number;
 }
 
 const createCircleTexture = () => {
@@ -31,7 +31,17 @@ const createCircleTexture = () => {
   return new THREE.CanvasTexture(canvas);
 };
 
-function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }: GalaxyCanvasProps & {
+function GalaxyPointsCloud({ 
+    points, 
+    topics, 
+    selectedPoint,
+    neighborsId,
+    onHover, 
+    onHoverOut, 
+    onPointClick 
+}: GalaxyCanvasProps & {
+    selectedPoint: GalaxyPoints | null;
+    neighborsId: number[];
     onHover: (point: GalaxyPoints, x: number, y: number) => void;
     onHoverOut: () => void;
     onPointClick: (point: GalaxyPoints) => void;
@@ -40,8 +50,10 @@ function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }
     const circleTexture = useMemo(() => createCircleTexture(), []);
     const [activate3DPoint, setActive3DPoint] = useState<GalaxyPoints | null>(null);
 
+    // ⏱️ Gestion de la rotation automatique de la galaxie
     useFrame(() => {
-        if (groupRef.current && !activate3DPoint) {
+        // 🌟 Modifié : S'arrête si on survole UN point OU si un point est SÉLECTIONNÉ (panneaux ouverts)
+        if (groupRef.current && !activate3DPoint && !selectedPoint) {
             groupRef.current.rotation.y += 0.002;
         }
     });
@@ -59,7 +71,6 @@ function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }
 
             const matchingModel = topics.find(t => t.name === point.topic);
             const hexColor = matchingModel ? matchingModel.color : '#9ca3af';
-          
             threeColor.set(hexColor);
 
             colorArray[i * 3] = threeColor.r;
@@ -84,6 +95,27 @@ function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }
           activate3DPoint.z * 0.8
         ]);
     }, [activate3DPoint]);
+
+    const selectedPointPosition = useMemo(() => {
+        if (!selectedPoint) return null;
+        return new Float32Array([
+          selectedPoint.x * 0.8,
+          selectedPoint.y * 0.8,
+          selectedPoint.z * 0.8
+        ]);
+    }, [selectedPoint]);
+
+    const neighborsPositions = useMemo(() => {
+        if (neighborsId.length === 0) return null;
+        const coords: number[] = [];
+        neighborsId.forEach(id => {
+            const pt = points.find(p => p.id === id);
+            if (pt) {
+                coords.push(pt.x * 0.8, pt.y * 0.8, pt.z * 0.8);
+            }
+        });
+        return coords.length > 0 ? new Float32Array(coords) : null;
+    }, [neighborsId, points]);
 
     const handlePointerMove = (e: any) => {
         e.stopPropagation();
@@ -111,6 +143,7 @@ function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }
 
     return (
       <group ref={groupRef}>
+        {/* Nuage de points principal */}
         <points
           onPointerMove={handlePointerMove}
           onPointerOut={handlePointerOut}
@@ -148,6 +181,40 @@ function GalaxyPointsCloud({ points, topics, onHover, onHoverOut, onPointClick }
                 />
             </points>
         )}
+
+        {selectedPointPosition && (
+            <points>
+                <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[selectedPointPosition, 3 ]}/>
+                </bufferGeometry>
+                <pointsMaterial
+                    size={2.0}          
+                    color="#e73d3d"    
+                    sizeAttenuation={true}
+                    map={circleTexture}
+                    transparent={true}
+                    opacity={1.0}
+                    depthWrite={false}
+                />
+            </points>
+        )}
+
+        {neighborsPositions && (
+            <points>
+                <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[neighborsPositions, 3]} />
+                </bufferGeometry>
+                <pointsMaterial
+                    size={1.0}
+                    color="#f5863d"
+                    sizeAttenuation={true}
+                    map={circleTexture}
+                    transparent={true}
+                    opacity={0.8}
+                    depthWrite={false}
+                />
+            </points>
+        )}
       </group>
     );
 }
@@ -156,9 +223,14 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     const [hoveredInfo, setHoveredInfo] = useState<HoveredInfo | null>(null);
     const [selectedPoint, setSelectedPoint] = useState<GalaxyPoints | null>(null);
 
+    const [neighborsId, setNeighborsId] = useState<number[]>([]);
+
     const [panelData, setPanelData] = useState<{ phrases: any[], models: any[], neighbors: any[] } | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
 
+    const [sourceTextData, setSourceTextData] = useState<SourceTextData | null>(null);
+    const [isLoadingText, setIsLoadingText] = useState<boolean>(false);
+    
     const handleHover = (point: GalaxyPoints, x: number, y: number) => {
         setHoveredInfo({ point, x, y});
         document.body.style.cursor = 'pointer';
@@ -179,15 +251,40 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         setSelectedPoint(point);
         setIsLoadingDetails(true);
         setPanelData(null);
+        setIsLoadingText(true);
 
         try {
             const data = await fetchPointDetails(point.id);
             setPanelData(data);
+
+            if (data.neighbors && Array.isArray(data.neighbors)) {
+                const ids = data.neighbors.map((n: any) => {
+                  const match = n.name.match(/Neighbor\s*:\s*(\d+)/i);
+                  return match ? parseInt(match[1]) : null;
+                }).filter((v): v is number => !!v);
+                setNeighborsId(ids);
+            }
         } catch (error) {
-            console.error("Erreur lors de la récupération des détails :", error);
+            console.error("Error fetching the point details :", error);
         } finally {
             setIsLoadingDetails(false);
         }
+
+        try {
+            const textData = await fetchSourceTextData(point.id);
+            setSourceTextData(textData)
+        } catch (error) {
+            console.log("Error fetching the original prompt and details :", error);
+        } finally {
+          setIsLoadingText(false);
+        }
+    };
+
+    const closeAllPanels = () => {
+        setSelectedPoint(null);
+        setPanelData(null);
+        setSourceTextData(null);
+        setNeighborsId([]);
     };
 
     return (
@@ -218,13 +315,14 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             </div>
         )}
 
-      {/* Conteneur principal pour le Canvas 3D */}
         <Canvas camera={{ position: [40, 40, 30], fov: 70 }}>
           <ambientLight intensity={1.5} />
           
           <GalaxyPointsCloud 
               points={points} 
               topics={topics} 
+              selectedPoint={selectedPoint}
+              neighborsId={neighborsId}
               onHover={handleHover} 
               onHoverOut={handleHoverOut}
               onPointClick={handlePointClick}
@@ -238,7 +336,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
           />
         </Canvas>
 
-      {/* 🌟 Intégration de l'affichage du panneau latéral droit */}
+      {/* Panneau latéral droit 1 */}
       {selectedPoint && (
         <div className='details-panel-container'>
           {isLoadingDetails ? (
@@ -246,19 +344,37 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
               <span className=''>
                  <span className='material-symbols-outlined spin-animation'>directory_sync</span>
               </span>
-
             </div>
           ) : (
             panelData && (
               <PointDetailsPanel 
-                onClose={() => {
-                  setSelectedPoint(null);
-                  setPanelData(null);
-                }}
+                onClose={closeAllPanels}
                 activeColor={panelColor}
                 phrases={panelData.phrases}
                 models={panelData.models}
                 neighbors={panelData.neighbors}
+              />
+            )
+          )}
+        </div>
+      )}
+      
+      {/* Panneau latéral gauche 2 */}
+      {selectedPoint && (
+        <div className="details-panel-container-2"> 
+          {isLoadingText ? (
+            <div className="">
+              <span className="material-symbols-outlined spin-animation">directory_sync</span>
+            </div>
+          ) : (
+            sourceTextData && (
+              <SourceTextPanel
+                onClose={closeAllPanels}
+                selectedPointId={selectedPoint.id}
+                model={selectedPoint.model}
+                topic={selectedPoint.topic}
+                original_prompt={sourceTextData.original_prompt}
+                full_response={sourceTextData.full_response}
               />
             )
           )}

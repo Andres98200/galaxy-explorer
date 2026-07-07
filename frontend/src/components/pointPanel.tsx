@@ -54,7 +54,7 @@ export default function PointDetailsPanel ({
                 </tbody>
             </table>
 
-            {/*Partie Attribution */}
+            {/*Partie Distribution */}
 
             <div className="attribution-section">
                 <div className="attribution-title">Model Distribution</div>
