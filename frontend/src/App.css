@@ -832,3 +832,17 @@ tr:nth-child(even) {
     display: flex;
     justify-content: space-between;
 }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px); 
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in-animation {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
