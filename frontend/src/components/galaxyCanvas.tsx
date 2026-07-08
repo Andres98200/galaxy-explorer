@@ -188,8 +188,8 @@ function GalaxyPointsCloud({
                     <bufferAttribute attach="attributes-position" args={[selectedPointPosition, 3 ]}/>
                 </bufferGeometry>
                 <pointsMaterial
-                    size={1.5}          
-                    color="#e73d3d"    
+                    size={1.2}          
+                    color="#f80000"    
                     sizeAttenuation={true}
                     map={circleTexture}
                     transparent={true}
