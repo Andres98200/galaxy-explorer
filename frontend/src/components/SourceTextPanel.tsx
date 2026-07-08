@@ -20,7 +20,7 @@ export default function SourceTextPanel({
     // Notre interrupteur magique
     const [showFullPrompt, setShowFullPrompt] = useState(false);
 
-    const shortPrompt = original_prompt ? original_prompt.split('\n')[0] : "";
+    const shortPrompt = original_prompt ? original_prompt.trim().split('\n')[0] : "";
 
     return (
         <div className="Points-panel">
