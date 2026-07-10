@@ -30,7 +30,7 @@ export default function PointDetailsPanel ({
     neighbors = []
 }: PointDetailsPanelProps) {
     return (
-        <div className="Points-panel">
+        <div className="Points-panel fade-in-animation">
 
             {/* Partie du tableau dans le container*/}
             <div className="panel-title">

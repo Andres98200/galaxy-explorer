@@ -24,6 +24,10 @@ export default function App() {
 
   const [globalStats, setGlobalStats] = useState({ totalScanned: 0, totalPhrases: 0 });
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const closeMenu = () => setIsMenuOpen(false)
+
   useEffect(() => {
     fetchDashboardData()
       .then((data) => {
@@ -117,7 +121,19 @@ export default function App() {
   return (
     <div className="dashboard-container">
 
-      <aside className="sidebar-placeholder">
+      <button className='burger-menu-btn'
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label='toggle-menu'
+              aria-expanded={isMenuOpen}
+              >
+              <span className='material-symbols-outlined'>
+                {isMenuOpen ? "close": "menu"}
+              </span>
+      </button>
+
+      {isMenuOpen && <div className="sidebar-overlay" onClick={closeMenu} />}
+
+      <aside className={`sidebar-placeholder ${isMenuOpen ? "open": ""}`}>
         <SideBarFilters 
           models={models}
           setModels={setModels}
