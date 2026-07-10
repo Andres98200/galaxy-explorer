@@ -80,7 +80,7 @@ export default function SourceTextPanel({
                 </div>
 
                 {/* Ta boîte de style existante reste inchangée, elle change juste son texte */}
-                <div className="original-response-box fade-in-animation"
+                <div className={`original-response-box fade-in-animation ${showFullPrompt ? 'is-prompt' : 'is-response'}`}
                      key={showFullPrompt ? "prompt" : "response"}>
                     {showFullPrompt 
                         ? (original_prompt || "No prompt available")
