@@ -188,8 +188,8 @@ function GalaxyPointsCloud({
                     <bufferAttribute attach="attributes-position" args={[selectedPointPosition, 3 ]}/>
                 </bufferGeometry>
                 <pointsMaterial
-                    size={2.0}          
-                    color="#e73d3d"    
+                    size={1.2}          
+                    color="#f80000"    
                     sizeAttenuation={true}
                     map={circleTexture}
                     transparent={true}
@@ -250,34 +250,40 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     const handlePointClick = async (point: GalaxyPoints) => {
         setSelectedPoint(point);
         setIsLoadingDetails(true);
-        setPanelData(null);
         setIsLoadingText(true);
+        setPanelData(null);
+        setNeighborsId([]);
 
-        try {
-            const data = await fetchPointDetails(point.id);
-            setPanelData(data);
-
-            if (data.neighbors && Array.isArray(data.neighbors)) {
-                const ids = data.neighbors.map((n: any) => {
-                  const match = n.name.match(/Neighbor\s*:\s*(\d+)/i);
-                  return match ? parseInt(match[1]) : null;
-                }).filter((v): v is number => !!v);
-                setNeighborsId(ids);
+        // 🚀 Lancement des deux requêtes API EN PARALLÈLE
+        Promise.all([
+            fetchPointDetails(point.id).catch(err => {
+                console.error("Error fetching details:", err);
+                return null;
+            }),
+            fetchSourceTextData(point.id).catch(err => {
+                console.error("Error fetching text:", err);
+                return null;
+            })
+        ]).then(([detailsData, textData]) => {
+            // Traitement des détails (Panneau droit & Voisins 3D)
+            if (detailsData) {
+                setPanelData(detailsData);
+                if (detailsData.neighbors && Array.isArray(detailsData.neighbors)) {
+                    const ids = detailsData.neighbors.map((n: any) => {
+                        const match = n.name.match(/Neighbor\s*:\s*(\d+)/i);
+                        return match ? parseInt(match[1], 10) : null;
+                    }).filter((id: any) => id !== null) as number[];
+                    setNeighborsId(ids);
+                }
             }
-        } catch (error) {
-            console.error("Error fetching the point details :", error);
-        } finally {
             setIsLoadingDetails(false);
-        }
 
-        try {
-            const textData = await fetchSourceTextData(point.id);
-            setSourceTextData(textData)
-        } catch (error) {
-            console.log("Error fetching the original prompt and details :", error);
-        } finally {
-          setIsLoadingText(false);
-        }
+            // Traitement du texte d'origine (Panneau gauche)
+            if (textData) {
+                setSourceTextData(textData);
+            }
+            setIsLoadingText(false);
+        });
     };
 
     const closeAllPanels = () => {
