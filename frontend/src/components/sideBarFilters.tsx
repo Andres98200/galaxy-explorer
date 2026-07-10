@@ -33,7 +33,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
 
   return (
     <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
-      <div className="logo">LOGO INCOMING</div>
+      <div className="logo">LOGO</div>
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
