@@ -18,9 +18,6 @@ def build_database():
     global_start = time.time()
     conn = sqlite3.connect(DB_FILE)
 
-    # ---------------------------------------------------------
-    # 1. Téléchargement et génération de la Galaxy (Points 3D)
-    # ---------------------------------------------------------
     print("📡 Connexion à Hugging Face pour la table 'clusters'...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
@@ -28,7 +25,7 @@ def build_database():
     count_data = {}
     MAX_PHRASES_PER_TOPIC = 2000
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 15000000 
+    MAX_LINES_TO_SCAN = 20000000 
 
     for line in dataset['clusters']:
         total_scanned += 1
