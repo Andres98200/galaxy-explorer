@@ -18,7 +18,7 @@ def build_database():
     global_start = time.time()
     conn = sqlite3.connect(DB_FILE)
 
-    print("📡 Connexion à Hugging Face pour la table 'clusters'...")
+    print("📡 Connexion à Hugging Face pour la table 'clusters' (Streaming)...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
     phrases, topics, models, clusters, prompt_indices = [], [], [], [], []
@@ -27,8 +27,14 @@ def build_database():
     total_scanned = 0
     MAX_LINES_TO_SCAN = 20000000 
 
+    print("🔍 Début du scan des lignes du dataset...")
     for line in dataset['clusters']:
         total_scanned += 1
+        
+        # Affichage de l'avancement toutes les 50 000 lignes scannées
+        if total_scanned % 50000 == 0:
+            print(f"   ⚡ Lignes parcourues : {total_scanned:,} | Points conservés : {len(phrases):,}")
+
         topic_line = line.get('topic')
         phrase_line = line.get('factoid') 
 
@@ -49,11 +55,20 @@ def build_database():
         if total_scanned >= MAX_LINES_TO_SCAN:
             break
 
-    print("🧠 Calcul des embeddings et du t-SNE 3D (Cette étape peut prendre du temps)...")
+    print(f"📊 Scan terminé ! {total_scanned:,} lignes analysées au total.")
+    print(f"🎯 Nombre final de points retenus pour la galaxie 3D : {len(phrases):,}")
+
+    print("🧠 Étape 1/2 : Calcul des embeddings (Génération des vecteurs d'IA)...")
+    start_embed = time.time()
     embeddings = embed_sentences(phrases)
+    print(f"   -> Embeddings calculés avec succès en {time.time() - start_embed:.2f} secondes.")
+
+    print("🧠 Étape 2/2 : Calcul du t-SNE 3D (Positionnement des points)...")
+    start_tsne = time.time()
     perplexity = min(30, len(embeddings) - 1)
     tsne_3d = TSNE(n_components=3, perplexity=perplexity, random_state=42)
     embeddings_3d = tsne_3d.fit_transform(embeddings)
+    print(f"   -> Coordonnées 3D générées en {time.time() - start_tsne:.2f} secondes.")
 
     galaxy_df = pd.DataFrame({
         'phrase': phrases, 'topic': topics, 'model': models,
@@ -63,20 +78,35 @@ def build_database():
     galaxy_df['id'] = range(len(galaxy_df))
     galaxy_df['cluster'] = galaxy_df['cluster'].fillna(-1).astype(int)
 
-    print("💾 Sauvegarde des points dans SQLite...")
+    print("💾 Sauvegarde des points 3D dans SQLite...")
     galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False)
-    del galaxy_df
 
-    # ---------------------------------------------------------
-    # 2. Téléchargement des réponses (Les 4 GB de texte bruts)
-    # ---------------------------------------------------------
+    print("🔑 Extraction des clés pour le filtrage des réponses...")
+    galaxy_keys = set(
+        zip(
+            galaxy_df['topic'].astype(str).str.strip().str.lower(),
+            galaxy_df['prompt_index'].astype(int)
+        )
+    )
+    del galaxy_df # Libération immédiate de la RAM
+
+    # 2. Téléchargement et filtrage intelligent des réponses
     print("📡 Téléchargement des full_responses (Streaming)...")
-    # On charge le dataset en mode classique pour le convertir
     responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses')
     
-    # Pour ne pas exploser la RAM, on convertit par paquets vers SQL
-    print("💾 Écriture par blocs des textes dans SQLite...")
+    print("🧹 Filtrage en cours pour éliminer les gigaoctets superflus...")
     responses_df = responses_ds.to_pandas()
+    
+    responses_df['topic_clean'] = responses_df['topic'].astype(str).str.strip().str.lower()
+    responses_df['prompt_index_clean'] = responses_df['prompt_index'].astype(int)
+    
+    responses_df = responses_df[
+        responses_df.set_index(['topic_clean', 'prompt_index_clean']).index.isin(galaxy_keys)
+    ]
+    
+    responses_df = responses_df.drop(columns=['topic_clean', 'prompt_index_clean'])
+
+    print(f"💾 Écriture de {len(responses_df):,} réponses filtrées dans SQLite...")
     responses_df['topic'] = responses_df['topic'].astype(str).str.strip().str.lower()
     responses_df['model_id'] = responses_df['model_id'].astype(str).str.strip().str.lower()
     responses_df['prompt_index'] = responses_df['prompt_index'].astype(int)
@@ -84,10 +114,8 @@ def build_database():
     responses_df.to_sql("responses", conn, if_exists="replace", index=False)
     del responses_df
 
-    # ---------------------------------------------------------
-    # 3. Création automatique des INDEX
-    # ---------------------------------------------------------
-    print("⚡ Création automatique des index de performance...")
+    # 3. Création des index (inchangé)
+    print("⚡ Création des index de performance pour SQLite...")
     cursor = conn.cursor()
     cursor.execute("CREATE INDEX idx_galaxy_id ON galaxy_points(id);")
     cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
@@ -96,7 +124,7 @@ def build_database():
     
     conn.commit()
     conn.close()
-    print(f"🎉 Base automatisée créée en {time.time() - global_start:.2f} secondes !")
+    print(f"🎉 Base ultra-légère créée avec succès en {time.time() - global_start:.2f} secondes !")
 
 if __name__ == "__main__":
     build_database()
