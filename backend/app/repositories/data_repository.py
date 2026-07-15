@@ -40,7 +40,7 @@ class DataRepository:
             "models": sorted(self.cached_models),
             "topics": sorted(self.cached_topics),  
             "stats": {
-                "total_dataset_scanned": 12000000,
+                "total_dataset_scanned": 4000000,
                 "total_embedded_phrases": self.total_cached_points
             }    
         }
