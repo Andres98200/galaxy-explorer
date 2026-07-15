@@ -23,9 +23,9 @@ def build_database():
     
     phrases, topics, models, clusters, prompt_indices = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 2000
+    MAX_PHRASES_PER_TOPIC = 200
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 20000000 
+    MAX_LINES_TO_SCAN = 4000000
 
     print("🔍 Début du scan des lignes du dataset...")
     for line in dataset['clusters']:
