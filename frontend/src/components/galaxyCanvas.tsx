@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import PointDetailsPanel from './pointPanel';
 import { type GalaxyPoints, type FilterItem, fetchPointDetails, fetchSourceTextData, type SourceTextData } from '../services/api';
 import SourceTextPanel from './SourceTextPanel';
+import { getColorFromString } from '../utils/colors';
 
 interface GalaxyCanvasProps {
   points: GalaxyPoints[];
@@ -59,28 +60,51 @@ function GalaxyPointsCloud({
         }
     });
 
-    const { positionsArray, colorsArray } = useMemo(() => {
-        const posArray = new Float32Array(points.length * 3);
-        const colorArray = new Float32Array(points.length * 3);
-        const threeColor = new THREE.Color();
+const { positionsArray, colorsArray } = useMemo(() => {
+    const posArray = new Float32Array(points.length * 3);
+    const colorArray = new Float32Array(points.length * 3);
+    const threeColor = new THREE.Color();
 
-        points.forEach((point, i) => {
-            const multiplier = 0.8; 
-            posArray[i * 3] = point.x * multiplier;
-            posArray[i * 3 + 1] = point.y * multiplier;
-            posArray[i * 3 + 2] = point.z * multiplier;
+    const activeTopics = topics.filter(t => t.active);
+    const isSingleTopic = activeTopics.length === 1;
 
-            const matchingModel = topics.find(t => t.name === point.topic);
-            const hexColor = matchingModel ? matchingModel.color : '#9ca3af';
-            threeColor.set(hexColor);
+    points.forEach((point, i) => {
+        const multiplier = 0.8; 
+        posArray[i * 3] = point.x * multiplier;
+        posArray[i * 3 + 1] = point.y * multiplier;
+        posArray[i * 3 + 2] = point.z * multiplier;
 
-            colorArray[i * 3] = threeColor.r;
-            colorArray[i * 3 + 1] = threeColor.g;
-            colorArray[i * 3 + 2] = threeColor.b;
-        });
+        // 1. Détermination de la couleur de base (Topic ou Cluster)
+        let hexColor = '#9ca3af';
+        if (isSingleTopic) {
+            hexColor = getColorFromString(`cluster-${point.cluster}`);
+        } else {
+            const matchingTopic = topics.find(t => t.name === point.topic);
+            hexColor = matchingTopic ? matchingTopic.color : '#9ca3af';
+        }
 
-        return { positionsArray: posArray, colorsArray: colorArray };
-    }, [points, topics]);
+        threeColor.set(hexColor);
+
+        // 🌟 2. EFFET ISSUE #26 : Gestion de la similarité visuelle au clic
+        if (selectedPoint) {
+            const isTarget = point.id === selectedPoint.id;
+            const isNeighbor = neighborsId.includes(point.id);
+
+            if (!isTarget && !isNeighbor) {
+                // Le point n'est ni le point cliqué, ni un voisin proche : on l'estompe fortement !
+                // On réduit la luminosité de sa couleur pour simuler la disparition
+                threeColor.multiplyScalar(0.15); 
+            }
+        }
+
+        colorArray[i * 3] = threeColor.r;
+        colorArray[i * 3 + 1] = threeColor.g;
+        colorArray[i * 3 + 2] = threeColor.b;
+    });
+
+    return { positionsArray: posArray, colorsArray: colorArray };
+// 🌟 Ne pas oublier d'ajouter selectedPoint et neighborsId dans les dépendances !
+}, [points, topics, selectedPoint, neighborsId]);
 
     const activePointColor = useMemo(() => {
         if (!activate3DPoint) return '#ffffff';
@@ -207,7 +231,7 @@ function GalaxyPointsCloud({
                 </bufferGeometry>
                 <pointsMaterial
                     size={1.0}
-                    color="#f5863d"
+                    color="#8700f5"
                     sizeAttenuation={true}
                     map={circleTexture}
                     transparent={true}
