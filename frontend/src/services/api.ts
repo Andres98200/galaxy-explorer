@@ -9,6 +9,7 @@ export interface RawDashboardFilters {
     models: string[];
     topics: string[];
     stats: DashboardStats;
+    settings: string[];
 }
 
 export interface GalaxyPoints {
@@ -20,6 +21,7 @@ export interface GalaxyPoints {
     x: number;
     y: number;
     z: number;
+    setting: string;
 }
 
 export interface FilterItem {
@@ -61,7 +63,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export const fetchDashboardData = async () => {
     try {
         const filtersRes = await fetch(`${API_BASE_URL}/api/meta`)
-
         const pointsRes = await fetch(`${API_BASE_URL}/api/points`)
 
         if (!filtersRes.ok) {
@@ -86,10 +87,18 @@ export const fetchDashboardData = async () => {
             active: true
         }));
 
+        // 🆕 Transformation des settings pour ton interface de filtres
+        const settings: FilterItem[] = rawFilters.settings.map(name => ({
+            name,
+            color: getColorFromString(name), // Donne une couleur unique ou une couleur fixe
+            active: true
+        }));
+
         const stats = rawFilters.stats;
 
-        return { models, topics, points, stats };
-    }catch(error){
+        // 🆕 On retourne également les 'settings' au composant React !
+        return { models, topics, settings, points, stats };
+    } catch(error) {
         console.error("Erreur API:", error)
         throw error;
     }

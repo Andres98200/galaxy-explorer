@@ -6,14 +6,26 @@ interface SideBarFiltersProps {
   setModels: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   topics: FilterItem[];
   setTopics: React.Dispatch<React.SetStateAction<FilterItem[]>>;
+  // 🆕 Ajout des props pour les settings
+  settings: FilterItem[];
+  setSettings: React.Dispatch<React.SetStateAction<FilterItem[]>>;
 }
 
-export default function SidebarFilters({models, setModels, topics, setTopics}: SideBarFiltersProps) {
+export default function SidebarFilters({
+  models, 
+  setModels, 
+  topics, 
+  setTopics,
+  settings,       // 🆕
+  setSettings     // 🆕
+}: SideBarFiltersProps) {
   const [isOpenModels, setOpenModels] = useState(false);
   const [isOpenTopics, setOpenTopics] = useState(false);
+  const [isOpenSettings, setOpenSettings] = useState(false); // 🆕
 
   const [searchModel, setSearchModel] = useState('');
   const [searchTopic, setSearchTopic] = useState('');
+  const [searchSetting, setSearchSetting] = useState(''); // 🆕
 
   const toggleModel = (name: string) => {
     setModels(prev => prev.map(m => m.name === name ? {...m, active: !m.active } : m ));
@@ -23,6 +35,11 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
     setTopics(prev => prev.map(t => t.name === name ? {...t, active: !t.active } : t ));
   };
 
+  // 🆕 Toggle pour les settings
+  const toggleSetting = (name: string) => {
+    setSettings(prev => prev.map(s => s.name === name ? {...s, active: !s.active } : s ));
+  };
+
   const filteredModelsPool = models
     .filter(m => !m.active)
     .filter(m => m.name.toLowerCase().includes(searchModel.toLowerCase()));
@@ -30,6 +47,11 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
   const filteredTopicsPool = topics
     .filter(t => !t.active)
     .filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase()));
+
+  // 🆕 Filtrage de la liste de recherche pour les settings
+  const filteredSettingsPool = settings
+    .filter(s => !s.active)
+    .filter(s => s.name.toLowerCase().includes(searchSetting.toLowerCase()));
 
   return (
     <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
@@ -59,7 +81,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
                 className="search-input"
                 placeholder={models.filter(m => m.active).length > 0 ? "" : "ChatGPT, Qwen..."}
                 value={searchModel}
-                autoFocus
+                autoFocus={isOpenModels}
                 onChange={(e) => setSearchModel(e.target.value)}
               />
           </div>
@@ -133,7 +155,7 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
                 className="search-input"
                 placeholder={topics.filter(t => t.active).length > 0 ? "" : "Bob Dylan, Brazilian..."}
                 value={searchTopic}
-                autoFocus
+                autoFocus={isOpenTopics}
                 onChange={(e) => setSearchTopic(e.target.value)}
               />
           </div>
@@ -176,6 +198,80 @@ export default function SidebarFilters({models, setModels, topics, setTopics}: S
                     }}>
                       <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
                       <span className="tag-text">{t.name}</span>
+                    </div>
+                  ))
+                )}
+            </div>
+        </div>
+        )}
+      </div>
+
+      {/* 🆕 SECTION SETTINGS */}
+      <div className="filter-group">
+        <h3>Select Setting</h3>
+        
+        <div className="select-box" onClick={() => !isOpenSettings && setOpenSettings(true)}>
+          <div className="selected-tags">
+            
+            {settings.filter(s => s.active).map(s => (
+              <div key={s.name} className="tag" title={s.name} style={{ '--tag-color': s.color } as React.CSSProperties}>
+                <span className="color-indicator" style={{ backgroundColor: s.color }}></span>
+                <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleSetting(s.name); }}>
+                  {s.name}
+                </span>
+                <span className="close-tag material-symbols-outlined" onClick={(e) => { e.stopPropagation(); toggleSetting(s.name); }}>
+                  close_small
+                </span>
+              </div>
+            ))}
+              <input 
+                type="text"
+                className="search-input"
+                placeholder={settings.filter(s => s.active).length > 0 ? "" : "ift..."}
+                value={searchSetting}
+                autoFocus={isOpenSettings}
+                onChange={(e) => setSearchSetting(e.target.value)}
+              />
+          </div>
+            
+          <div className='filter-buttons'>
+            <span 
+              className="material-symbols-outlined close-research"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isOpenSettings) {
+                  setOpenSettings(false);
+                  setSearchSetting('');
+                } else if (settings.some(s => s.active)) {
+                  setSettings(prev => prev.map(s => ({...s, active: false})));
+                } else {
+                  setOpenSettings(true);
+                }
+              }}
+            >
+              {isOpenSettings ? 'close' : settings.some(s => s.active) ? 'cancel' : 'search'}
+            </span>
+          </div>
+        </div>
+
+        {isOpenSettings && (
+        <div className="dropdown-content">
+            <button className="btn-select-all" onClick={() => setSettings(prev => prev.map(s => ({...s, active: true})))}>
+              Select All
+            </button>
+            <div className="available-tags-pool">
+                {filteredSettingsPool.length === 0 ? (
+                  <p className="empty-state">
+                    {settings.filter(s => !s.active).length === 0 ? "All settings selected." : "No settings match your search."}
+                  </p>
+                ) : (
+                  filteredSettingsPool.map(s => (
+                    <div key={s.name} className="tag-pill" title={s.name} onClick={() => {
+                      toggleSetting(s.name);
+                      setSearchSetting('');
+                    }}>
+                      <span className="color-indicator" style={{ backgroundColor: s.color }}></span>
+                      <span className="tag-text">{s.name}</span>
                     </div>
                   ))
                 )}

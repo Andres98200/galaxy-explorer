@@ -45,6 +45,7 @@ function GalaxyPointsCloud({
     onHover: (point: GalaxyPoints, x: number, y: number) => void;
     onHoverOut: () => void;
     onPointClick: (point: GalaxyPoints) => void;
+    
 }) {
     const groupRef = useRef<THREE.Group>(null);
     const circleTexture = useMemo(() => createCircleTexture(), []);
