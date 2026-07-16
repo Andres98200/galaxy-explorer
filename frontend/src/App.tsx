@@ -18,6 +18,7 @@ export default function App() {
   const [models, setModels] = useState<FilterItem[]>([]);
   const [topics, setTopics] = useState<FilterItem[]>([]);
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
+  const [settings, setSettings] = useState<FilterItem[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,9 @@ export default function App() {
       .then((data) => {
         setModels(data.models);
         setTopics(data.topics);
+        setSettings(data.settings);
         SetPoints(data.points);
+        
 
         if (data.stats) {
           setGlobalStats({
@@ -53,13 +56,16 @@ export default function App() {
   // Extraction des filtres actifs
   const activeModelNames = useMemo(() => models.filter(m => m.active).map(m => m.name), [models]);
   const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
+  const activeSettingNames = useMemo(() => settings.filter(s => s.active).map(s => s.name), [settings]);
 
   // Filtrage des points pour la 3D
   const filteredPoints = useMemo(() => {
     return points.filter(point => 
-      activeModelNames.includes(point.model) && activeTopicNames.includes(point.topic)
+      activeModelNames.includes(point.model) && 
+      activeTopicNames.includes(point.topic) &&
+      activeSettingNames.includes(point.setting)
     );
-  }, [points, activeModelNames, activeTopicNames]);
+  }, [points, activeModelNames, activeTopicNames, activeSettingNames]);
 
   const dynamicStats = useMemo(() => {
     return [
@@ -88,7 +94,7 @@ export default function App() {
         iconColor: '#B700FF' 
       }
     ];
-  }, [globalStats, models, filteredPoints.length]);
+  }, [globalStats, models, topics.length, filteredPoints.length]);
 
   if (loading) {
     return ( 
@@ -139,6 +145,8 @@ export default function App() {
           setModels={setModels}
           topics={topics}
           setTopics={setTopics}
+          settings={settings}
+          setSettings={setSettings}
         />
       </aside>
 
