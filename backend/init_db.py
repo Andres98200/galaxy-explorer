@@ -31,7 +31,6 @@ def build_database():
     for line in dataset['clusters']:
         total_scanned += 1
         
-        # Affichage de l'avancement toutes les 50 000 lignes scannées
         if total_scanned % 50000 == 0:
             print(f"   ⚡ Lignes parcourues : {total_scanned:,} | Points conservés : {len(phrases):,}")
 
@@ -58,6 +57,25 @@ def build_database():
     print(f"📊 Scan terminé ! {total_scanned:,} lignes analysées au total.")
     print(f"🎯 Nombre final de points retenus pour la galaxie 3D : {len(phrases):,}")
 
+    print("📡 Téléchargement des full_responses (Mémoire)...")
+    responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses')
+    
+    print("🧹 Préparation et filtrage initial des réponses...")
+    responses_df = responses_ds.to_pandas()
+    
+    responses_df['topic_clean'] = responses_df['topic'].astype(str).str.strip().str.lower()
+    responses_df['prompt_index_clean'] = responses_df['prompt_index'].astype(int)
+    responses_df['model_clean'] = responses_df['model_id'].astype(str).str.strip().str.lower()
+
+    print("⚙️ Extraction des associations complexes (topic, prompt_index, model) -> setting...")
+    setting_mapping = responses_df[['topic_clean', 'prompt_index_clean', 'model_clean', 'setting']].drop_duplicates()
+    
+    setting_map_dict = {
+        (row['topic_clean'], row['prompt_index_clean'], row['model_clean']): row['setting']
+        for _, row in setting_mapping.iterrows()
+    }
+
+    # 2. Calculs géométriques et création de galaxy_df
     print("🧠 Étape 1/2 : Calcul des embeddings (Génération des vecteurs d'IA)...")
     start_embed = time.time()
     embeddings = embed_sentences(phrases)
@@ -78,53 +96,51 @@ def build_database():
     galaxy_df['id'] = range(len(galaxy_df))
     galaxy_df['cluster'] = galaxy_df['cluster'].fillna(-1).astype(int)
 
+    print("🔗 Liaison de la colonne 'setting' aux points de la galaxie...")
+    galaxy_df['setting'] = galaxy_df.apply(
+        lambda r: setting_map_dict.get(
+            (
+                str(r['topic']).strip().lower(), 
+                int(r['prompt_index']),
+                str(r['model']).strip().lower()
+            ), 
+            "unknown"
+        ),
+        axis=1
+    )
+
     print("💾 Sauvegarde des points 3D dans SQLite...")
     galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False)
 
-    print("🔑 Extraction des clés pour le filtrage des réponses...")
-    galaxy_keys = set(
-        zip(
-            galaxy_df['topic'].astype(str).str.strip().str.lower(),
-            galaxy_df['prompt_index'].astype(int)
-        )
-    )
-    del galaxy_df # Libération immédiate de la RAM
+    # 🛑 AJOUT FILTRAGE STRICT ANTI-CRASH DISQUE 🛑
+    print("🧹 Filtrage final des réponses pour ne garder QUE les textes des 2 000 points...")
+    galaxy_df['match_key'] = galaxy_df['topic'].astype(str).str.strip().str.lower() + "_" + galaxy_df['prompt_index'].astype(str) + "_" + galaxy_df['model'].astype(str).str.strip().str.lower()
+    responses_df['match_key'] = responses_df['topic_clean'] + "_" + responses_df['prompt_index_clean'].astype(str) + "_" + responses_df['model_clean']
 
-    # 2. Téléchargement et filtrage intelligent des réponses
-    print("📡 Téléchargement des full_responses (Streaming)...")
-    responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses')
+    final_responses_df = responses_df[responses_df['match_key'].isin(galaxy_df['match_key'])].copy()
     
-    print("🧹 Filtrage en cours pour éliminer les gigaoctets superflus...")
-    responses_df = responses_ds.to_pandas()
-    
-    responses_df['topic_clean'] = responses_df['topic'].astype(str).str.strip().str.lower()
-    responses_df['prompt_index_clean'] = responses_df['prompt_index'].astype(int)
-    
-    responses_df = responses_df[
-        responses_df.set_index(['topic_clean', 'prompt_index_clean']).index.isin(galaxy_keys)
-    ]
-    
-    responses_df = responses_df.drop(columns=['topic_clean', 'prompt_index_clean'])
-
-    print(f"💾 Écriture de {len(responses_df):,} réponses filtrées dans SQLite...")
-    responses_df['topic'] = responses_df['topic'].astype(str).str.strip().str.lower()
-    responses_df['model_id'] = responses_df['model_id'].astype(str).str.strip().str.lower()
-    responses_df['prompt_index'] = responses_df['prompt_index'].astype(int)
-    
-    responses_df.to_sql("responses", conn, if_exists="replace", index=False)
+    # Nettoyage avant insertion
+    galaxy_df = galaxy_df.drop(columns=['match_key'])
+    final_responses_df = final_responses_df.drop(columns=['topic_clean', 'prompt_index_clean', 'model_clean', 'match_key'])
     del responses_df
 
-    # 3. Création des index (inchangé)
+    print(f"💾 Écriture de seulement {len(final_responses_df):,} réponses utiles dans SQLite...")
+    final_responses_df['topic'] = final_responses_df['topic'].astype(str).str.strip().str.lower()
+    final_responses_df['model_id'] = final_responses_df['model_id'].astype(str).str.strip().str.lower()
+    final_responses_df['prompt_index'] = final_responses_df['prompt_index'].astype(int)
+    
+    final_responses_df.to_sql("responses", conn, if_exists="replace", index=False)
+    del final_responses_df
+    del galaxy_df
+
     print("⚡ Création des index de performance pour SQLite...")
     cursor = conn.cursor()
     cursor.execute("CREATE INDEX idx_galaxy_id ON galaxy_points(id);")
     cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
     cursor.execute("CREATE INDEX idx_galaxy_model ON galaxy_points(model);")
+    cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);") # Index pour le filtre RAG/IFT ⚡
     cursor.execute("CREATE INDEX idx_lookup_responses ON responses(topic, model_id, prompt_index);")
     
     conn.commit()
     conn.close()
     print(f"🎉 Base ultra-légère créée avec succès en {time.time() - global_start:.2f} secondes !")
-
-if __name__ == "__main__":
-    build_database()

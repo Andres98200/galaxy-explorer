@@ -45,9 +45,10 @@ def get_metadata():
 @app.get("/api/points")
 def get_points(
     models: Optional[List[str]] = Query(None, alias="models[]"),
-    topics: Optional[List[str]] = Query(None, alias="topics[]")
+    topics: Optional[List[str]] = Query(None, alias="topics[]"),
+    settings: Optional[List[str]] = Query(None, alias="settings[]")
 ):
-    return repo.get_filtered_points(selected_models=models, selected_topics=topics)
+    return repo.get_filtered_points(selected_models=models, selected_topics=topics, selected_settings=settings)
 
 @app.get("/api/points/{point_id}/details")
 def get_point_details(point_id: int):
