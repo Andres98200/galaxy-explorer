@@ -55,7 +55,7 @@ export default function SidebarFilters({
 
   return (
     <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
-      <div className="logo"> LOGO </div>
+      <div className="logo"> LOGO</div>
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
