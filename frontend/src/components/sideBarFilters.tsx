@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { type FilterItem } from '../services/api'
+import logo from '../assets/LOGO.png'
 
 interface SideBarFiltersProps {
   models: FilterItem[];
@@ -55,7 +56,10 @@ export default function SidebarFilters({
 
   return (
     <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
-      <div className="logo"> LOGO</div>
+      <div className="logo-container">
+        <img src={logo} alt='AXECOM IA logo' className='logo-img' title='AXECOM AI'></img>
+        <p className='logo-text'>AXECOM AI</p>
+      </div>
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
