@@ -63,14 +63,14 @@ export default function SidebarFilters({
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
-        <h3>Select LLM model</h3>
+        <h3>LLM model</h3>
         
         <div className="select-box" onClick={() => !isOpenModels && setOpenModels(true)}>
           <div className="selected-tags">
             
             {models.filter(m => m.active).map(m => (
-              <div key={m.name} className="tag" title={m.name} style={{ '--tag-color': m.color } as React.CSSProperties}>
-                <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
+              <div key={m.name} className="tag" title={m.name}>
+                <span className="color-indicator"></span>
                 <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleModel(m.name); }}>
                   {m.name}
                 </span>
@@ -83,7 +83,7 @@ export default function SidebarFilters({
               <input 
                 type="text"
                 className="search-input"
-                placeholder={models.filter(m => m.active).length > 0 ? "" : "ChatGPT, Qwen..."}
+                placeholder={models.filter(m => m.active).length > 0 ? "" : "GPT, GEMMA, QWEN..."}
                 value={searchModel}
                 autoFocus={isOpenModels}
                 onChange={(e) => setSearchModel(e.target.value)}
@@ -136,79 +136,67 @@ export default function SidebarFilters({
         )}
       </div>
 
-      {/* SECTION TOPICS */}
-      <div className="filter-group">
-        <h3>Select Topic</h3>
-        
-        <div className="select-box" onClick={() => !isOpenTopics && setOpenTopics(true)}>
-          <div className="selected-tags">
-            
-            {topics.filter(t => t.active).map(t => (
-              <div key={t.name} className="tag" title={t.name} style={{ '--tag-color': t.color } as React.CSSProperties}>
-                <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
-                <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleTopic(t.name); }}>
-                  {t.name}
-                </span>
-                <span className="close-tag material-symbols-outlined" onClick={(e) => { e.stopPropagation(); toggleTopic(t.name); }}>
-                  close_small
-                </span>
-              </div>
-            ))}
-              <input 
-                type="text"
-                className="search-input"
-                placeholder={topics.filter(t => t.active).length > 0 ? "" : "Bob Dylan, Brazilian..."}
-                value={searchTopic}
-                autoFocus={isOpenTopics}
-                onChange={(e) => setSearchTopic(e.target.value)}
-              />
-          </div>
-            
-          <div className='filter-buttons'>
-            <span 
-              className="material-symbols-outlined close-research"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOpenTopics) {
-                  setOpenTopics(false);
-                  setSearchTopic('');
-                } else if (topics.some(t => t.active)) {
-                  setTopics(prev => prev.map(t => ({...t, active: false})));
-                } else {
-                  setOpenTopics(true);
-                }
-              }}
-            >
-              {isOpenTopics ? 'close' : topics.some(t => t.active) ? 'cancel' : 'search'}
-            </span>
-          </div>
-        </div>
+{/* SECTION TOPICS */}
+<div className="filter-group">
+  <div className='topic-header'>
+      <h3>Topic</h3>
+    <div className="action-buttons">
+      <button 
+        title={'Select all'}
+        className="btn-select-all-topic" 
+        onClick={() => setTopics(prev => prev.map(t => ({ ...t, active: true })))}
+      >
+        <span className='material-symbols-outlined select-all-topic'>
+          done_all
+        </span>
+      </button>
 
-        {isOpenTopics && (
-        <div className="dropdown-content">
-            <button className="btn-select-all" onClick={() => setTopics(prev => prev.map(t => ({...t, active: true})))}>
-              Select All
-            </button>
-            <div className="available-tags-pool">
-                {filteredTopicsPool.length === 0 ? (
-                  <p className="empty-state">
-                    {topics.filter(t => !t.active).length === 0 ? "All topics selected." : "No topics match your search."}
-                  </p>
-                ) : (
-                  filteredTopicsPool.map(t => (
-                    <div key={t.name} className="tag-pill" title={t.name} onClick={() => {
-                      toggleTopic(t.name);
-                      setSearchTopic('');
-                    }}>
-                      <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
-                      <span className="tag-text">{t.name}</span>
-                    </div>
-                  ))
-                )}
-            </div>
-        </div>
-        )}
+      <button 
+        title={'Deselect all'}
+        className="btn-deselect-all-topic" 
+        onClick={() => setTopics(prev => prev.map(t => ({ ...t, active: false })))}
+      >
+        <span className='material-symbols-outlined deselect-all-topic'>
+          remove_selection
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div className="">
+    {searchTopic && (
+      <div className="filter-buttons">
+        <span 
+          className="material-symbols-outlined close-research"
+          onClick={() => setSearchTopic('')}
+        >
+          cancel
+        </span>
       </div>
+    )}
+  </div>
+
+  {/* Liste de Checkboxes */}
+  <div className="checkbox-list">
+    {topics
+      .filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase()))
+      .map(t => (
+        <label key={t.name} className="checkbox-item" title={t.name}>
+          <input
+            type="checkbox"
+            checked={t.active}
+            onChange={() => toggleTopic(t.name)}
+          />
+          <span className="color-indicator"></span>
+          <span className="checkbox-label">{t.name}</span>
+        </label>
+      ))}
+
+    {topics.filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase())).length === 0 && (
+      <p className="empty-state">No topics found</p>
+    )}
+  </div>
+</div>
 
       {/* 🆕 SECTION SETTINGS */}
       <div className="filter-group">
