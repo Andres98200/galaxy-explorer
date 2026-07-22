@@ -395,10 +395,24 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   background-color: #e77676;
 
 }
+.btn-select-all-topic:disabled,
+.btn-deselect-all-topic:disabled {
+  opacity: 0.5;                
+  cursor:not-allowed;               
+  border-color: #e2e8f0;       
+  color: #94a3b8;             
+}
 
 .btn-select-all:hover {
   color: #3254eb;
   border-color: #cbd5e1;
+}
+
+.btn-select-all:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #94a3b8;
+  border-color: #e2e8f0;
 }
 
 .dropdown-content {
