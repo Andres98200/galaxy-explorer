@@ -142,7 +142,7 @@ export default function SidebarFilters({
   {/* SECTION TOPICS */}
   <div className="filter-group">
     <div className='topic-header'>
-        <h3>Topic</h3>
+        <h3>Topics</h3>
       <div className="action-buttons">
         <button 
           title={'Select all'}
@@ -206,7 +206,7 @@ export default function SidebarFilters({
         {/* 🆕 SECTION SETTINGS */}
     <div className="filter-group">
         <div className="topic-header">
-          <h3>Setting</h3>
+          <h3>Settings</h3>
           <div className="action-buttons">
             <button 
               title="Select all"
