@@ -23,6 +23,9 @@ export default function SidebarFilters({
   const [isOpenTopics, setOpenTopics] = useState(false);
   const [isOpenSettings, setOpenSettings] = useState(false);
 
+  // Nouvel état pour étendre ou réduire les modèles sélectionnés
+  const [showAllModels, setShowAllModels] = useState(false);
+
   const [searchModel, setSearchModel] = useState('');
   const [searchTopic, setSearchTopic] = useState('');
   const [searchSetting, setSearchSetting] = useState('');
@@ -39,6 +42,10 @@ export default function SidebarFilters({
     setSettings(prev => prev.map(s => s.name === name ? {...s, active: !s.active } : s ));
   };
 
+  const activeModels = models.filter(m => m.active);
+  // Si showAllModels est false, on limite l'affichage aux 6 premiers
+  const displayedActiveModels = showAllModels ? activeModels : activeModels.slice(0, 6);
+
   const filteredModelsPool = models
     .filter(m => !m.active)
     .filter(m => m.name.toLowerCase().includes(searchModel.toLowerCase()));
@@ -52,13 +59,65 @@ export default function SidebarFilters({
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
-        <h3>LLM model</h3>
+        <div className='filters-header'>
+          <h3>LLM model</h3>
+          <div className='action-buttons'>
+            <button 
+              title='Search model' 
+              className='btn-search-all-topic'
+              onClick={()=> {
+                setOpenModels(!isOpenModels);
+                if (isOpenModels) setSearchModel('');
+              }}
+            >
+              <span className="material-symbols-outlined select-all-topic">
+                {isOpenModels ? 'close' : 'search'}
+              </span>
+            </button>
+
+            <button 
+              title='Select all' 
+              className='btn-select-all-topic'
+              disabled={models.every(m => m.active)}
+              onClick={()=> setModels(prev => prev.map(m => ({...m, active: true})))}
+            >
+              <span className='material-symbols-outlined select-all-topic'>
+                dashboard_2_add
+              </span>
+            </button>
+
+            <button 
+              title={'Deselect all'}
+              className="btn-deselect-all-topic"
+              disabled={models.every(m => !m.active)}
+              onClick={() => setModels(prev => prev.map(m => ({ ...m, active: false })))}
+            >
+              <span className='material-symbols-outlined deselect-all-topic'>
+                remove_selection
+              </span>
+            </button>
+          </div>
+
+          {isOpenModels && (
+            <div className="search-box-container">
+              <input 
+                type="text"
+                className="search-input"
+                placeholder="Search Model..."
+                value={searchModel}
+                autoFocus
+                onChange={(e) => setSearchModel(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
         
         <div className="select-box" onClick={() => !isOpenModels && setOpenModels(true)}>
-          <div className="selected-tags">
-            {models.filter(m => m.active).map(m => (
+          {/* Classe conditionnelle 'scrollable' appliquée quand étendu */}
+          <div className={`selected-tags ${showAllModels ? 'expanded-scroll' : ''}`}>
+            {displayedActiveModels.map(m => (
               <div key={m.name} className="tag" title={m.name}>
-                <span className="color-indicator"></span>
+                <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
                 <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleModel(m.name); }}>
                   {m.name}
                 </span>
@@ -67,46 +126,24 @@ export default function SidebarFilters({
                 </span>
               </div>
             ))}
-
-            <input 
-              type="text"
-              className="search-input"
-              placeholder={models.filter(m => m.active).length > 0 ? "" : "GPT, GEMMA, QWEN..."}
-              value={searchModel}
-              autoFocus={isOpenModels}
-              onChange={(e) => setSearchModel(e.target.value)}
-            />
           </div>
 
-          <div className='filter-buttons'>
-            <span 
-              className="material-symbols-outlined close-research"
+          {/* Bouton Show More / Show Less (affiché uniquement si > 6 modèles sélectionnés) */}
+          {activeModels.length > 6 && (
+            <button 
+              className="btn-show-more"
               onClick={(e) => {
                 e.stopPropagation();
-                if (isOpenModels) {
-                  setOpenModels(false);
-                  setSearchModel('');
-                } else if (models.some(m => m.active)) {
-                  setModels(prev => prev.map(m => ({...m, active: false})));
-                } else {
-                  setOpenModels(true);
-                }
+                setShowAllModels(!showAllModels);
               }}
             >
-              {isOpenModels ? 'close' : models.some(m => m.active) ? 'cancel' : 'search'}
-            </span>
-          </div>
+              {showAllModels ? 'Show less' : ` Show more (${activeModels.length - 6})`}
+            </button>
+          )}
         </div>
         
         {isOpenModels && (
           <div className="dropdown-content">
-            <button
-              disabled={models.every(m => m.active)}
-              className="btn-select-all" 
-              onClick={() => setModels(prev => prev.map(m => ({...m, active: true})))}
-            >
-              Select All
-            </button>
             <div className="available-tags-pool">
               {filteredModelsPool.length === 0 ? (
                 <p className="empty-state">
@@ -130,10 +167,9 @@ export default function SidebarFilters({
 
       {/* SECTION TOPICS */}
       <div className="filter-group">
-        <div className='topic-header'>
+        <div className='filters-header'>
           <h3>Topics</h3>
           <div className="action-buttons">
-            {/* Bouton Loupe pour ouvrir/fermer la recherche de topics */}
             <button
               title="Search topic"
               className="btn-search-all-topic"
@@ -154,7 +190,7 @@ export default function SidebarFilters({
               onClick={() => setTopics(prev => prev.map(t => ({ ...t, active: true })))}
             >
               <span className='material-symbols-outlined select-all-topic'>
-                done_all
+                list_alt_check
               </span>
             </button>
 
@@ -171,7 +207,6 @@ export default function SidebarFilters({
           </div>
         </div>
 
-        {/* Input de recherche pour Topics quand ouvert */}
         {isOpenTopics && (
           <div className="search-box-container">
             <input 
@@ -185,7 +220,6 @@ export default function SidebarFilters({
           </div>
         )}
 
-        {/* Liste de Checkboxes */}
         <div className="checkbox-list">
           {topics
             .filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase()))
@@ -209,10 +243,9 @@ export default function SidebarFilters({
 
       {/* SECTION SETTINGS */}
       <div className="filter-group">
-        <div className="topic-header">
+        <div className="filters-header">
           <h3>Settings</h3>
           <div className="action-buttons">
-            {/* Bouton Loupe pour ouvrir/fermer la recherche de settings */}
             <button
               title="Search setting"
               className="btn-select-all-topic"
@@ -233,7 +266,7 @@ export default function SidebarFilters({
               onClick={() => setSettings(prev => prev.map(s => ({ ...s, active: true })))}
             >
               <span className="material-symbols-outlined select-all-topic">
-                done_all
+                list_alt_check
               </span>
             </button>
 
@@ -250,7 +283,6 @@ export default function SidebarFilters({
           </div>
         </div>
 
-        {/* Input de recherche pour Settings quand ouvert */}
         {isOpenSettings && (
           <div className="search-box-container">
             <input 
@@ -264,7 +296,6 @@ export default function SidebarFilters({
           </div>
         )}
 
-        {/* Liste de Checkboxes */}
         <div className="checkbox-list">
           {settings
             .filter(s => s.name.toLowerCase().includes(searchSetting.toLowerCase()))
