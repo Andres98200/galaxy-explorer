@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { type FilterItem } from '../services/api'
+import logo from '../assets/LOGO.png'
 
 interface SideBarFiltersProps {
   models: FilterItem[];
   setModels: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   topics: FilterItem[];
   setTopics: React.Dispatch<React.SetStateAction<FilterItem[]>>;
-  // 🆕 Ajout des props pour les settings
   settings: FilterItem[];
   setSettings: React.Dispatch<React.SetStateAction<FilterItem[]>>;
 }
@@ -16,16 +16,19 @@ export default function SidebarFilters({
   setModels, 
   topics, 
   setTopics,
-  settings,       // 🆕
-  setSettings     // 🆕
+  settings,       
+  setSettings     
 }: SideBarFiltersProps) {
   const [isOpenModels, setOpenModels] = useState(false);
   const [isOpenTopics, setOpenTopics] = useState(false);
-  const [isOpenSettings, setOpenSettings] = useState(false); // 🆕
+  const [isOpenSettings, setOpenSettings] = useState(false);
+
+  // Nouvel état pour étendre ou réduire les modèles sélectionnés
+  const [showAllModels, setShowAllModels] = useState(false);
 
   const [searchModel, setSearchModel] = useState('');
   const [searchTopic, setSearchTopic] = useState('');
-  const [searchSetting, setSearchSetting] = useState(''); // 🆕
+  const [searchSetting, setSearchSetting] = useState('');
 
   const toggleModel = (name: string) => {
     setModels(prev => prev.map(m => m.name === name ? {...m, active: !m.active } : m ));
@@ -35,37 +38,86 @@ export default function SidebarFilters({
     setTopics(prev => prev.map(t => t.name === name ? {...t, active: !t.active } : t ));
   };
 
-  // 🆕 Toggle pour les settings
   const toggleSetting = (name: string) => {
     setSettings(prev => prev.map(s => s.name === name ? {...s, active: !s.active } : s ));
   };
+
+  const activeModels = models.filter(m => m.active);
+  // Si showAllModels est false, on limite l'affichage aux 6 premiers
+  const displayedActiveModels = showAllModels ? activeModels : activeModels.slice(0, 6);
 
   const filteredModelsPool = models
     .filter(m => !m.active)
     .filter(m => m.name.toLowerCase().includes(searchModel.toLowerCase()));
 
-  const filteredTopicsPool = topics
-    .filter(t => !t.active)
-    .filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase()));
-
-  // 🆕 Filtrage de la liste de recherche pour les settings
-  const filteredSettingsPool = settings
-    .filter(s => !s.active)
-    .filter(s => s.name.toLowerCase().includes(searchSetting.toLowerCase()));
-
   return (
     <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
-      <div className="logo"> LOGO</div>
+      <div className="logo-container">
+        <img src={logo} alt='AXECOM IA logo' className='logo-img' title='AXECOM AI' />
+        <p className='logo-text'>AXECOM AI</p>
+      </div>
         
       {/* SECTION MODÈLES */}
       <div className="filter-group">
-        <h3>Select LLM model</h3>
+        <div className='filters-header'>
+          <h3>LLM model</h3>
+          <div className='action-buttons'>
+            <button 
+              title='Search model' 
+              className='btn-search-all-topic'
+              onClick={()=> {
+                setOpenModels(!isOpenModels);
+                if (isOpenModels) setSearchModel('');
+              }}
+            >
+              <span className="material-symbols-outlined select-all-topic">
+                {isOpenModels ? 'close' : 'search'}
+              </span>
+            </button>
+
+            <button 
+              title='Select all' 
+              className='btn-select-all-topic'
+              disabled={models.every(m => m.active)}
+              onClick={()=> setModels(prev => prev.map(m => ({...m, active: true})))}
+            >
+              <span className='material-symbols-outlined select-all-topic'>
+                dashboard_2_add
+              </span>
+            </button>
+
+            <button 
+              title={'Deselect all'}
+              className="btn-deselect-all-topic"
+              disabled={models.every(m => !m.active)}
+              onClick={() => setModels(prev => prev.map(m => ({ ...m, active: false })))}
+            >
+              <span className='material-symbols-outlined deselect-all-topic'>
+                remove_selection
+              </span>
+            </button>
+          </div>
+           </div>
+
+          {isOpenModels && (
+            <div className="search-box-container">
+              <input 
+                type="text"
+                className="search-input"
+                placeholder="Search Model..."
+                value={searchModel}
+                autoFocus
+                onChange={(e) => setSearchModel(e.target.value)}
+              />
+            </div>
+          )}
+
         
         <div className="select-box" onClick={() => !isOpenModels && setOpenModels(true)}>
-          <div className="selected-tags">
-            
-            {models.filter(m => m.active).map(m => (
-              <div key={m.name} className="tag" title={m.name} style={{ '--tag-color': m.color } as React.CSSProperties}>
+          {/* Classe conditionnelle 'scrollable' appliquée quand étendu */}
+          <div className={`selected-tags ${showAllModels ? 'expanded-scroll' : ''}`}>
+            {displayedActiveModels.map(m => (
+              <div key={m.name} className="tag" title={m.name}>
                 <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
                 <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleModel(m.name); }}>
                   {m.name}
@@ -75,209 +127,195 @@ export default function SidebarFilters({
                 </span>
               </div>
             ))}
-
-              <input 
-                type="text"
-                className="search-input"
-                placeholder={models.filter(m => m.active).length > 0 ? "" : "ChatGPT, Qwen..."}
-                value={searchModel}
-                autoFocus={isOpenModels}
-                onChange={(e) => setSearchModel(e.target.value)}
-              />
           </div>
 
-          <div className='filter-buttons'>
-            <span 
-              className="material-symbols-outlined close-research"
+          {/* Bouton Show More / Show Less (affiché uniquement si > 6 modèles sélectionnés) */}
+          {activeModels.length > 6 && (
+            <button 
+              className="btn-show-more"
               onClick={(e) => {
                 e.stopPropagation();
-                if (isOpenModels) {
-                  setOpenModels(false);
-                  setSearchModel('');
-                } else if (models.some(m => m.active)) {
-                  setModels(prev => prev.map(m => ({...m, active: false})));
-                } else {
-                  setOpenModels(true);
-                }
+                setShowAllModels(!showAllModels);
               }}
             >
-              {isOpenModels ? 'close' : models.some(m => m.active) ? 'cancel' : 'search'}
-            </span>
-          </div>
+              {showAllModels ? 'Show less' : ` Show more (${activeModels.length - 6})`}
+            </button>
+          )}
         </div>
         
         {isOpenModels && (
-            <div className="dropdown-content">
-                <button className="btn-select-all" onClick={() => setModels(prev => prev.map(m => ({...m, active: true})))}>
-                  Select All
-                </button>
-                <div className="available-tags-pool">
-                {filteredModelsPool.length === 0 ? (
-                  <p className="empty-state">
-                    {models.filter(m => !m.active).length === 0 ? "All models selected" : "No models match your search"}
-                  </p>
-                ) : (
-                  filteredModelsPool.map(m => (
-                      <div key={m.name} className="tag-pill" title={m.name} onClick={() => {
-                        toggleModel(m.name);
-                        setSearchModel('');
-                      }}>
-                        <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
-                        <span className="tag-text">{m.name}</span>
-                      </div>
-                  ))
-                )}
-                </div>
+          <div className="dropdown-content">
+            <div className="available-tags-pool">
+              {filteredModelsPool.length === 0 ? (
+                <p className="empty-state">
+                  {models.filter(m => !m.active).length === 0 ? "All models selected" : "No models match your search"}
+                </p>
+              ) : (
+                filteredModelsPool.map(m => (
+                  <div key={m.name} className="tag-pill" title={m.name} onClick={() => {
+                    toggleModel(m.name);
+                    setSearchModel('');
+                  }}>
+                    <span className="color-indicator" style={{ backgroundColor: m.color }}></span>
+                    <span className="tag-text">{m.name}</span>
+                  </div>
+                ))
+              )}
             </div>
+          </div>
         )}
       </div>
 
       {/* SECTION TOPICS */}
       <div className="filter-group">
-        <h3>Select Topic</h3>
-        
-        <div className="select-box" onClick={() => !isOpenTopics && setOpenTopics(true)}>
-          <div className="selected-tags">
-            
-            {topics.filter(t => t.active).map(t => (
-              <div key={t.name} className="tag" title={t.name} style={{ '--tag-color': t.color } as React.CSSProperties}>
-                <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
-                <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleTopic(t.name); }}>
-                  {t.name}
-                </span>
-                <span className="close-tag material-symbols-outlined" onClick={(e) => { e.stopPropagation(); toggleTopic(t.name); }}>
-                  close_small
-                </span>
-              </div>
-            ))}
-              <input 
-                type="text"
-                className="search-input"
-                placeholder={topics.filter(t => t.active).length > 0 ? "" : "Bob Dylan, Brazilian..."}
-                value={searchTopic}
-                autoFocus={isOpenTopics}
-                onChange={(e) => setSearchTopic(e.target.value)}
-              />
-          </div>
-            
-          <div className='filter-buttons'>
-            <span 
-              className="material-symbols-outlined close-research"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOpenTopics) {
-                  setOpenTopics(false);
-                  setSearchTopic('');
-                } else if (topics.some(t => t.active)) {
-                  setTopics(prev => prev.map(t => ({...t, active: false})));
-                } else {
-                  setOpenTopics(true);
-                }
+        <div className='filters-header'>
+          <h3>Topics</h3>
+          <div className="action-buttons">
+            <button
+              title="Search topic"
+              className="btn-search-all-topic"
+              onClick={() => {
+                setOpenTopics(!isOpenTopics);
+                if (isOpenTopics) setSearchTopic('');
               }}
             >
-              {isOpenTopics ? 'close' : topics.some(t => t.active) ? 'cancel' : 'search'}
-            </span>
+              <span className='material-symbols-outlined select-all-topic'>
+                {isOpenTopics ? 'close' : 'search'}
+              </span>
+            </button>
+
+            <button 
+              title={'Select all'}
+              className="btn-select-all-topic"
+              disabled={topics.every(t => t.active)}
+              onClick={() => setTopics(prev => prev.map(t => ({ ...t, active: true })))}
+            >
+              <span className='material-symbols-outlined select-all-topic'>
+                list_alt_check
+              </span>
+            </button>
+
+            <button 
+              title={'Deselect all'}
+              className="btn-deselect-all-topic"
+              disabled={topics.every(t => !t.active)}
+              onClick={() => setTopics(prev => prev.map(t => ({ ...t, active: false })))}
+            >
+              <span className='material-symbols-outlined deselect-all-topic'>
+                remove_selection
+              </span>
+            </button>
           </div>
         </div>
 
         {isOpenTopics && (
-        <div className="dropdown-content">
-            <button className="btn-select-all" onClick={() => setTopics(prev => prev.map(t => ({...t, active: true})))}>
-              Select All
-            </button>
-            <div className="available-tags-pool">
-                {filteredTopicsPool.length === 0 ? (
-                  <p className="empty-state">
-                    {topics.filter(t => !t.active).length === 0 ? "All topics selected." : "No topics match your search."}
-                  </p>
-                ) : (
-                  filteredTopicsPool.map(t => (
-                    <div key={t.name} className="tag-pill" title={t.name} onClick={() => {
-                      toggleTopic(t.name);
-                      setSearchTopic('');
-                    }}>
-                      <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
-                      <span className="tag-text">{t.name}</span>
-                    </div>
-                  ))
-                )}
-            </div>
-        </div>
+          <div className="search-box-container">
+            <input 
+              type="text"
+              className="search-input"
+              placeholder="Search topics..."
+              value={searchTopic}
+              autoFocus
+              onChange={(e) => setSearchTopic(e.target.value)}
+            />
+          </div>
         )}
+
+        <div className="checkbox-list">
+          {topics
+            .filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase()))
+            .map(t => (
+              <label key={t.name} className="checkbox-item" title={t.name}>
+                <input
+                  type="checkbox"
+                  checked={t.active}
+                  onChange={() => toggleTopic(t.name)}
+                />
+                <span className="color-indicator" style={{ backgroundColor: t.color }}></span>
+                <span className="checkbox-label">{t.name}</span>
+              </label>
+            ))}
+
+          {topics.filter(t => t.name.toLowerCase().includes(searchTopic.toLowerCase())).length === 0 && (
+            <p className="empty-state">No topics found</p>
+          )}
+        </div>
       </div>
 
-      {/* 🆕 SECTION SETTINGS */}
+      {/* SECTION SETTINGS */}
       <div className="filter-group">
-        <h3>Select Setting</h3>
-        
-        <div className="select-box" onClick={() => !isOpenSettings && setOpenSettings(true)}>
-          <div className="selected-tags">
-            
-            {settings.filter(s => s.active).map(s => (
-              <div key={s.name} className="tag" title={s.name} style={{ '--tag-color': s.color } as React.CSSProperties}>
-                <span className="color-indicator" style={{ backgroundColor: s.color }}></span>
-                <span className="tag-text" onClick={(e) => { e.stopPropagation(); toggleSetting(s.name); }}>
-                  {s.name}
-                </span>
-                <span className="close-tag material-symbols-outlined" onClick={(e) => { e.stopPropagation(); toggleSetting(s.name); }}>
-                  close_small
-                </span>
-              </div>
-            ))}
-              <input 
-                type="text"
-                className="search-input"
-                placeholder={settings.filter(s => s.active).length > 0 ? "" : "ift..."}
-                value={searchSetting}
-                autoFocus={isOpenSettings}
-                onChange={(e) => setSearchSetting(e.target.value)}
-              />
-          </div>
-            
-          <div className='filter-buttons'>
-            <span 
-              className="material-symbols-outlined close-research"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOpenSettings) {
-                  setOpenSettings(false);
-                  setSearchSetting('');
-                } else if (settings.some(s => s.active)) {
-                  setSettings(prev => prev.map(s => ({...s, active: false})));
-                } else {
-                  setOpenSettings(true);
-                }
+        <div className="filters-header">
+          <h3>Settings</h3>
+          <div className="action-buttons">
+            <button
+              title="Search setting"
+              className="btn-select-all-topic"
+              onClick={() => {
+                setOpenSettings(!isOpenSettings);
+                if (isOpenSettings) setSearchSetting('');
               }}
             >
-              {isOpenSettings ? 'close' : settings.some(s => s.active) ? 'cancel' : 'search'}
-            </span>
+              <span className='material-symbols-outlined select-all-topic'>
+                {isOpenSettings ? 'close' : 'search'}
+              </span>
+            </button>
+
+            <button 
+              title="Select all"
+              className="btn-select-all-topic"
+              disabled={settings.every(s => s.active)}
+              onClick={() => setSettings(prev => prev.map(s => ({ ...s, active: true })))}
+            >
+              <span className="material-symbols-outlined select-all-topic">
+                list_alt_check
+              </span>
+            </button>
+
+            <button 
+              title="Deselect all"
+              className="btn-deselect-all-topic"
+              disabled={settings.every(s => !s.active)}
+              onClick={() => setSettings(prev => prev.map(s => ({ ...s, active: false })))}
+            >
+              <span className="material-symbols-outlined deselect-all-topic">
+                remove_selection
+              </span>
+            </button>
           </div>
         </div>
 
         {isOpenSettings && (
-        <div className="dropdown-content">
-            <button className="btn-select-all" onClick={() => setSettings(prev => prev.map(s => ({...s, active: true})))}>
-              Select All
-            </button>
-            <div className="available-tags-pool">
-                {filteredSettingsPool.length === 0 ? (
-                  <p className="empty-state">
-                    {settings.filter(s => !s.active).length === 0 ? "All settings selected." : "No settings match your search."}
-                  </p>
-                ) : (
-                  filteredSettingsPool.map(s => (
-                    <div key={s.name} className="tag-pill" title={s.name} onClick={() => {
-                      toggleSetting(s.name);
-                      setSearchSetting('');
-                    }}>
-                      <span className="color-indicator" style={{ backgroundColor: s.color }}></span>
-                      <span className="tag-text">{s.name}</span>
-                    </div>
-                  ))
-                )}
-            </div>
-        </div>
+          <div className="search-box-container">
+            <input 
+              type="text"
+              className="search-input"
+              placeholder="Search settings..."
+              value={searchSetting}
+              autoFocus
+              onChange={(e) => setSearchSetting(e.target.value)}
+            />
+          </div>
         )}
+
+        <div className="checkbox-list">
+          {settings
+            .filter(s => s.name.toLowerCase().includes(searchSetting.toLowerCase()))
+            .map(s => (
+              <label key={s.name} className="checkbox-item" title={s.name}>
+                <input
+                  type="checkbox"
+                  checked={s.active}
+                  onChange={() => toggleSetting(s.name)}
+                />
+                <span className="color-indicator" style={{ backgroundColor: s.color }}></span>
+                <span className="checkbox-label">{s.name}</span>
+              </label>
+            ))}
+
+          {settings.filter(s => s.name.toLowerCase().includes(searchSetting.toLowerCase())).length === 0 && (
+            <p className="empty-state">No settings found</p>
+          )}
+        </div>
       </div>
     </aside>
   )

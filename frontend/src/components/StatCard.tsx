@@ -8,16 +8,17 @@ interface StatCardProps {
 export default function StatCard({ title, value, icon, iconColor }: StatCardProps) {
     return (
         <div className="stat-card">
-            <div className="stat-card-header">
                 <span 
                 className="material-symbols-outlined stat-card-icon"
                 style={{ backgroundColor: `${iconColor}15`, color: iconColor}}
                 >
                     {icon}
                 </span>
-                <span className="stat-card-title">{title}</span>
+                <div className="stat-card-content">
+                    <span className="stat-card-title">{title}</span>
+                    <div className="stat-card-value">{value}</div>
             </div>
-            <div className="stat-card-value">{value}</div>
+                
         </div>
     )
 }
