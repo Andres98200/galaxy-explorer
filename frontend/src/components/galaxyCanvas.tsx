@@ -346,7 +346,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             </div>
         )}
 
-        <Canvas camera={{ position: [40, 40, 30], fov: 70 }}>
+        <Canvas camera={{ position: [10, 10, 40], fov: 70 }}>
           <ambientLight intensity={1.5} />
           
           <GalaxyPointsCloud 

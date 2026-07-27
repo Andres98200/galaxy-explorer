@@ -1073,9 +1073,17 @@ tr:nth-child(even) {
   }
 
   .stat-card {
-    height: 50px;
+    height: 55px;
+    width: 165px;
   }
 
+  .stat-card-title{
+    font-size: 0.8rem;
+  }
+
+  .stat-card-value {
+    font-size: 1.4rem;
+  }
 
 .details-panel-container {
    width: min(500px, 28vw);
@@ -1095,17 +1103,9 @@ tr:nth-child(even) {
   .is-response {
     max-height: 400px;
   }
-  
-  .select-box {
-    max-height:  200px;
-  }
-  
-  .selected-tags {
-    max-height: 120px;
-  }
 
   .available-tags-pool {
-    max-height: 120px;
+    max-height: 95px; 
   }
 
   .checkbox-list {
@@ -1166,14 +1166,12 @@ tr:nth-child(even) {
     width: 100%;
   }
 
-  .select-box,
-  .dropdown-content {
-    max-height: 200px;
+ .available-tags-pool {
+    max-height: 95px; 
   }
 
-  .selected-tags,
-  .available-tags-pool {
-    max-height: 120px;
+  .checkbox-list {
+    max-height: 210px;
   }
 
   .burger-menu-btn {

@@ -97,6 +97,7 @@ export default function SidebarFilters({
               </span>
             </button>
           </div>
+           </div>
 
           {isOpenModels && (
             <div className="search-box-container">
@@ -110,7 +111,7 @@ export default function SidebarFilters({
               />
             </div>
           )}
-        </div>
+
         
         <div className="select-box" onClick={() => !isOpenModels && setOpenModels(true)}>
           {/* Classe conditionnelle 'scrollable' appliquée quand étendu */}
