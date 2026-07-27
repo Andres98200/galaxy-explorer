@@ -70,28 +70,28 @@ export default function App() {
   const dynamicStats = useMemo(() => {
     return [
       { 
-        title: 'Total Data', 
+        title: 'TOTAL DATA', 
         value: formatCompactNumber(globalStats.totalScanned),
-        icon: 'analytics', 
-        iconColor: '#4F46E5' 
+        icon: 'monitoring', 
+        iconColor: '#2563EB' 
       },
       { 
-        title: 'Phrases', 
+        title: 'PHRASES', 
         value: formatCompactNumber(globalStats.totalPhrases), 
-        icon: 'data_usage', 
-        iconColor: '#0EA5E9' 
+        icon: 'description', 
+        iconColor: '#059669' 
       },
       { 
-        title: 'Models', 
+        title: 'MODELS', 
         value: models.length, 
-        icon: 'cognition_2', 
-        iconColor: '#16A34A' 
+        icon: 'robot_2', 
+        iconColor: '#7C3AED' 
       },
       { 
-        title: 'Topics', 
+        title: 'TOPICS', 
         value: topics.length,
-        icon: 'article', 
-        iconColor: '#B700FF' 
+        icon: 'lab_research', 
+        iconColor: '#D97706' 
       }
     ];
   }, [globalStats, models, topics.length, filteredPoints.length]);
