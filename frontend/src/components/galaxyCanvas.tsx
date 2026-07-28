@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react'; 
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -6,6 +6,9 @@ import PointDetailsPanel from './pointPanel';
 import { type GalaxyPoints, type FilterItem, fetchPointDetails, fetchSourceTextData, type SourceTextData } from '../services/api';
 import SourceTextPanel from './SourceTextPanel';
 import { getColorFromString } from '../utils/colors';
+import SourceTextPanelSkeleton from './Skeletons/SourceTextPanelSkeleton'
+import PointDetailsPanelSkeleton from './Skeletons/PointDetailSkeleton';
+
 
 interface GalaxyCanvasProps {
   points: GalaxyPoints[];
@@ -46,65 +49,74 @@ function GalaxyPointsCloud({
     onHover: (point: GalaxyPoints, x: number, y: number) => void;
     onHoverOut: () => void;
     onPointClick: (point: GalaxyPoints) => void;
-    
 }) {
     const groupRef = useRef<THREE.Group>(null);
+    // 👈 CORRECTION 1: Référence sur la BufferGeometry du nuage principal
+    const geometryRef = useRef<THREE.BufferGeometry>(null);
+
     const circleTexture = useMemo(() => createCircleTexture(), []);
     const [activate3DPoint, setActive3DPoint] = useState<GalaxyPoints | null>(null);
 
-    // ⏱️ Gestion de la rotation automatique de la galaxie
+    // ⏱️ Rotation automatique
     useFrame(() => {
-        // 🌟 Modifié : S'arrête si on survole UN point OU si un point est SÉLECTIONNÉ (panneaux ouverts)
         if (groupRef.current && !activate3DPoint && !selectedPoint) {
             groupRef.current.rotation.y += 0.002;
         }
     });
 
-const { positionsArray, colorsArray } = useMemo(() => {
-    const posArray = new Float32Array(points.length * 3);
-    const colorArray = new Float32Array(points.length * 3);
-    const threeColor = new THREE.Color();
+    const { positionsArray, colorsArray } = useMemo(() => {
+        const posArray = new Float32Array(points.length * 3);
+        const colorArray = new Float32Array(points.length * 3);
+        const threeColor = new THREE.Color();
 
-    const activeTopics = topics.filter(t => t.active);
-    const isSingleTopic = activeTopics.length === 1;
+        const activeTopics = topics.filter(t => t.active);
+        const isSingleTopic = activeTopics.length === 1;
 
-    points.forEach((point, i) => {
-        const multiplier = 0.8; 
-        posArray[i * 3] = point.x * multiplier;
-        posArray[i * 3 + 1] = point.y * multiplier;
-        posArray[i * 3 + 2] = point.z * multiplier;
+        points.forEach((point, i) => {
+            const multiplier = 0.8; 
+            posArray[i * 3] = point.x * multiplier;
+            posArray[i * 3 + 1] = point.y * multiplier;
+            posArray[i * 3 + 2] = point.z * multiplier;
 
-        // 1. Détermination de la couleur de base (Topic ou Cluster)
-        let hexColor = '#9ca3af';
-        if (isSingleTopic) {
-            hexColor = getColorFromString(`cluster-${point.cluster}`);
-        } else {
-            const matchingTopic = topics.find(t => t.name === point.topic);
-            hexColor = matchingTopic ? matchingTopic.color : '#9ca3af';
-        }
-
-        threeColor.set(hexColor);
-
-        // 🌟 2. EFFET ISSUE #26 : Gestion de la similarité visuelle au clic
-        if (selectedPoint) {
-            const isTarget = point.id === selectedPoint.id;
-            const isNeighbor = neighborsId.includes(point.id);
-
-            if (!isTarget && !isNeighbor) {
-                // Le point n'est ni le point cliqué, ni un voisin proche : on l'estompe fortement !
-                // On réduit la luminosité de sa couleur pour simuler la disparition
-                threeColor.multiplyScalar(0.15); 
+            let hexColor = '#9ca3af';
+            if (isSingleTopic) {
+                hexColor = getColorFromString(`cluster-${point.cluster}`);
+            } else {
+                const matchingTopic = topics.find(t => t.name === point.topic);
+                hexColor = matchingTopic ? matchingTopic.color : '#9ca3af';
             }
+
+            threeColor.set(hexColor);
+
+            if (selectedPoint) {
+                const isTarget = point.id === selectedPoint.id;
+                const isNeighbor = neighborsId.includes(point.id);
+
+                if (!isTarget && !isNeighbor) {
+                    threeColor.multiplyScalar(0.15); 
+                }
+            }
+
+            colorArray[i * 3] = threeColor.r;
+            colorArray[i * 3 + 1] = threeColor.g;
+            colorArray[i * 3 + 2] = threeColor.b;
+        });
+
+        return { positionsArray: posArray, colorsArray: colorArray };
+    }, [points, topics, selectedPoint, neighborsId]);
+
+    // 👈 CORRECTION 2: Recalcul systématique des zones de clic et mise à jour des données GPU
+    useEffect(() => {
+        if (geometryRef.current) {
+            geometryRef.current.computeBoundingSphere();
+            
+            const posAttr = geometryRef.current.getAttribute('position');
+            const colorAttr = geometryRef.current.getAttribute('color');
+            
+            if (posAttr) posAttr.needsUpdate = true;
+            if (colorAttr) colorAttr.needsUpdate = true;
         }
-
-        colorArray[i * 3] = threeColor.r;
-        colorArray[i * 3 + 1] = threeColor.g;
-        colorArray[i * 3 + 2] = threeColor.b;
-    });
-
-    return { positionsArray: posArray, colorsArray: colorArray };
-// 🌟 Ne pas oublier d'ajouter selectedPoint et neighborsId dans les dépendances !
-}, [points, topics, selectedPoint, neighborsId]);
+    }, [positionsArray, colorsArray]);
 
     const activePointColor = useMemo(() => {
         if (!activate3DPoint) return '#ffffff';
@@ -174,9 +186,18 @@ const { positionsArray, colorsArray } = useMemo(() => {
           onPointerOut={handlePointerOut}
           onClick={handlePointerClick}
         >
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[positionsArray, 3]} />
-            <bufferAttribute attach="attributes-color" args={[colorsArray, 3]} />
+          {/* 👈 CORRECTION 3: Liaison de geometryRef + ajout des clés sur les attributs */}
+          <bufferGeometry ref={geometryRef}>
+            <bufferAttribute 
+              key={positionsArray.length}
+              attach="attributes-position" 
+              args={[positionsArray, 3]} 
+            />
+            <bufferAttribute 
+              key={colorsArray.length}
+              attach="attributes-color" 
+              args={[colorsArray, 3]} 
+            />
           </bufferGeometry>
           <pointsMaterial
             size={0.6}
@@ -186,7 +207,7 @@ const { positionsArray, colorsArray } = useMemo(() => {
             transparent={true}
             alphaTest={0.5}
             opacity={0.9}
-            depthWrite={true}
+            depthWrite={false}
           />
         </points>
 
@@ -279,7 +300,6 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         setPanelData(null);
         setNeighborsId([]);
 
-        // 🚀 Lancement des deux requêtes API EN PARALLÈLE
         Promise.all([
             fetchPointDetails(point.id).catch(err => {
                 console.error("Error fetching details:", err);
@@ -290,7 +310,6 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
                 return null;
             })
         ]).then(([detailsData, textData]) => {
-            // Traitement des détails (Panneau droit & Voisins 3D)
             if (detailsData) {
                 setPanelData(detailsData);
                 if (detailsData.neighbors && Array.isArray(detailsData.neighbors)) {
@@ -303,7 +322,6 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             }
             setIsLoadingDetails(false);
 
-            // Traitement du texte d'origine (Panneau gauche)
             if (textData) {
                 setSourceTextData(textData);
             }
@@ -346,7 +364,19 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             </div>
         )}
 
-        <Canvas camera={{ position: [10, 10, 40], fov: 70 }}>
+        {/* 👈 CORRECTION 4: Configuration de la tolérance (threshold) du raycaster */}
+        <Canvas 
+          camera={{ position: [10, 10, 40], fov: 70 }}
+          raycaster={{
+            params: {
+              Points: { threshold: 0.8 }, // Ajuste à 0.8-1.2 si tu souhaites une zone de clic encore plus large
+              Mesh: {},
+              Line: { threshold: 1 },
+              LOD: {},
+              Sprite: {}
+            }
+          }}
+        >
           <ambientLight intensity={1.5} />
           
           <GalaxyPointsCloud 
@@ -371,11 +401,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
       {selectedPoint && (
         <div className='details-panel-container'>
           {isLoadingDetails ? (
-            <div>
-              <span className=''>
-                 <span className='material-symbols-outlined spin-animation'>directory_sync</span>
-              </span>
-            </div>
+            <PointDetailsPanelSkeleton onClose={closeAllPanels} />
           ) : (
             panelData && (
               <PointDetailsPanel 
@@ -394,9 +420,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
       {selectedPoint && (
         <div className="details-panel-container-2"> 
           {isLoadingText ? (
-            <div className="">
-              <span className="material-symbols-outlined spin-animation">directory_sync</span>
-            </div>
+            <SourceTextPanelSkeleton onClose={closeAllPanels} />
           ) : (
             sourceTextData && (
               <SourceTextPanel
