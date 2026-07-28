@@ -51,7 +51,6 @@ function GalaxyPointsCloud({
     onPointClick: (point: GalaxyPoints) => void;
 }) {
     const groupRef = useRef<THREE.Group>(null);
-    // 👈 CORRECTION 1: Référence sur la BufferGeometry du nuage principal
     const geometryRef = useRef<THREE.BufferGeometry>(null);
 
     const circleTexture = useMemo(() => createCircleTexture(), []);
@@ -105,7 +104,6 @@ function GalaxyPointsCloud({
         return { positionsArray: posArray, colorsArray: colorArray };
     }, [points, topics, selectedPoint, neighborsId]);
 
-    // 👈 CORRECTION 2: Recalcul systématique des zones de clic et mise à jour des données GPU
     useEffect(() => {
         if (geometryRef.current) {
             geometryRef.current.computeBoundingSphere();
@@ -186,7 +184,6 @@ function GalaxyPointsCloud({
           onPointerOut={handlePointerOut}
           onClick={handlePointerClick}
         >
-          {/* 👈 CORRECTION 3: Liaison de geometryRef + ajout des clés sur les attributs */}
           <bufferGeometry ref={geometryRef}>
             <bufferAttribute 
               key={positionsArray.length}
@@ -364,7 +361,6 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             </div>
         )}
 
-        {/* 👈 CORRECTION 4: Configuration de la tolérance (threshold) du raycaster */}
         <Canvas 
           camera={{ position: [10, 10, 40], fov: 70 }}
           raycaster={{

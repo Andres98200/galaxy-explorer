@@ -142,27 +142,11 @@ export default function App() {
           setSettings={setSettings}
         />
        )}
-       )}
       </aside>
 
       <main className="main-content">
 
         <div className="stats-row">
-          {loading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <StatCardSkeleton key={index} />
-            ))
-          ) : (
-            dynamicStats.map((stat, index) => (
-              <StatCard 
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                icon={stat.icon}
-                iconColor={stat.iconColor}
-              />
-            ))
-          )}
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <StatCardSkeleton key={index} />
