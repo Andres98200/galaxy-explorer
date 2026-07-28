@@ -160,12 +160,14 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   font-weight: 600;
 }
 
+
 .stat-card-value {
   color: var(--card-content-text);
   font-size: 1.8rem;
   font-weight: 700;
   text-align: left;
 }
+
 
 .content-grid {
   flex: 1;
@@ -185,6 +187,19 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   box-sizing: border-box;
   height: 100%;
 
+}
+
+.sidebar-skeleton-content {
+  width: 400px;
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-radius: 0px 0px 0px 15px;
+  padding: 40px 24px;
+  display : flex;
+  flex-direction: column;
+  gap: 32px; 
+  box-sizing: border-box;
+  height: 100%;
 }
 
 .filter-group{
@@ -219,6 +234,15 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   align-items: stretch;
 }
 
+.select-box-skeleton {
+  justify-content: space-between;
+  box-sizing: border-box;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .select-box:hover {
   border-color: #cbd5e1;
 }
@@ -234,6 +258,19 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   margin-left: auto;
   padding-top: 5px;
   transition: all ease 1.2s;
+}
+
+.btn-show-more-skeleton { 
+  border: none;
+  text-align: right;
+  display: inline-flex;
+  align-self: flex-end;
+  margin-left: auto;
+  padding-top: 5px;
+  height: 5px;
+  width: 70px;
+  border-radius: 5px;
+
 }
 
 .btn-show-more:hover {
@@ -314,6 +351,17 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   text-align: left;
 }
 
+.tag-skeleton {
+  border-radius: 20px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  width: 100%;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
 .tag:hover {
   border-color: #7a97f7;
   color: #e41710;
@@ -366,6 +414,13 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  width: 25px;
+  height: 25px;
+}
+
+.btn-search-all-topic-skeleton {
+  border: none;
+  border-radius: 5px;
   width: 25px;
   height: 25px;
 }
@@ -494,6 +549,16 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   box-sizing: border-box;
 }
 
+.checkbox-list-skeleton{
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: 25px;
+  width: 100%;
+  padding-right: 15px;
+  border-radius: 5px;
+}
+
 .checkbox-label {
   flex: 1;              
   min-width: 0;         
@@ -554,6 +619,16 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   grid-template-columns: auto auto;
   
 }
+.filters-header-skeleton {
+  display: grid;
+  grid-template-columns: auto auto;
+  font-size: 1rem;
+  border-radius: 5px;
+  height: 15px;
+  width: 100px;
+  
+}
+
 
 .action-buttons {
   display: flex;
