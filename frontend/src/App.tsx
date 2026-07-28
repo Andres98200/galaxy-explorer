@@ -4,6 +4,8 @@ import './App.css'
 import SideBarFilters from './components/sideBarFilters'
 import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/services/api.ts'
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
+import SideBarFilterSkeleton from './components/Skeletons/SideBarSkeleton.tsx'
+import StatCardSkeleton from './components/Skeletons/StatCardSkeleton.tsx'
 
 function formatCompactNumber(number: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -96,18 +98,6 @@ export default function App() {
     ];
   }, [globalStats, models, topics.length, filteredPoints.length]);
 
-  if (loading) {
-    return ( 
-      <div className="fetching-card">
-        <div className='fetch-icon-wrapper'>
-          <span className='material-symbols-outlined spin-animation'>directory_sync</span>
-        </div>
-        <span className="fetch-text-container">
-          <h3 className='fetch-title'>Fetching the galaxy Data</h3>
-        </span>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -140,6 +130,9 @@ export default function App() {
       {isMenuOpen && <div className="sidebar-overlay" onClick={closeMenu} />}
 
       <aside className={`sidebar-placeholder ${isMenuOpen ? "open": ""}`}>
+       {loading ? (
+        <SideBarFilterSkeleton/>
+       ): (
         <SideBarFilters 
           models={models}
           setModels={setModels}
@@ -148,20 +141,27 @@ export default function App() {
           settings={settings}
           setSettings={setSettings}
         />
+       )}
       </aside>
 
       <main className="main-content">
 
         <div className="stats-row">
-          {dynamicStats.map((stat, index) => (
-            <StatCard 
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              iconColor={stat.iconColor}
-            />
-          ))}
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <StatCardSkeleton key={index} />
+            ))
+          ) : (
+            dynamicStats.map((stat, index) => (
+              <StatCard 
+                key={index}
+                title={stat.title}
+                value={stat.value}
+                icon={stat.icon}
+                iconColor={stat.iconColor}
+              />
+            ))
+          )}
         </div>
 
         <div className="content-grid">
