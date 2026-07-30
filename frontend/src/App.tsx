@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import StatCard from './components/StatCard'
 import './App.css'
 import SideBarFilters from './components/sideBarFilters'
-import { fetchDashboardData, type FilterItem, type GalaxyPoints } from '../src/services/api.ts'
+import { 
+  fetchDashboardData, 
+  fetchDiversityOverview, 
+  type FilterItem, 
+  type GalaxyPoints, 
+  type DiversityOverview 
+} from '../src/services/api.ts'
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
 import SideBarFilterSkeleton from './components/Skeletons/SideBarSkeleton.tsx'
 import StatCardSkeleton from './components/Skeletons/StatCardSkeleton.tsx'
@@ -22,15 +28,25 @@ export default function App() {
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
   const [settings, setSettings] = useState<FilterItem[]>([]);
 
+  // 🆕 État pour les métriques de diversité (HSD, VS, CD)
+  const [diversity, setDiversity] = useState<DiversityOverview>({
+    avg_hsd: 0,
+    avg_vs: 0,
+    global_cd: 0,
+    total_topics: 0,
+    total_points: 0
+  });
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const [globalStats, setGlobalStats] = useState({ totalScanned: 0, totalPhrases: 0 });
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const closeMenu = () => setIsMenuOpen(false)
+  const closeMenu = () => setIsMenuOpen(false);
 
+  // Initialisation du tableau de bord
   useEffect(() => {
     fetchDashboardData()
       .then((data) => {
@@ -38,7 +54,6 @@ export default function App() {
         setTopics(data.topics);
         setSettings(data.settings);
         SetPoints(data.points);
-        
 
         if (data.stats) {
           setGlobalStats({
@@ -50,7 +65,7 @@ export default function App() {
       })
       .catch((err) => {
         console.error(err);
-        setError("Impossible to feth the data");
+        setError("Impossible to fetch the data");
         setLoading(false);
       });
   }, []);
@@ -59,6 +74,15 @@ export default function App() {
   const activeModelNames = useMemo(() => models.filter(m => m.active).map(m => m.name), [models]);
   const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
   const activeSettingNames = useMemo(() => settings.filter(s => s.active).map(s => s.name), [settings]);
+
+  // 🆕 Mise à jour dynamique des cartes lors d'un changement de filtres
+  useEffect(() => {
+    if (loading) return;
+
+    fetchDiversityOverview(activeModelNames, activeTopicNames, activeSettingNames)
+      .then((data) => setDiversity(data))
+      .catch((err) => console.error("Error fetching overview metrics:", err));
+  }, [activeModelNames, activeTopicNames, activeSettingNames, loading]);
 
   // Filtrage des points pour la 3D
   const filteredPoints = useMemo(() => {
@@ -69,6 +93,7 @@ export default function App() {
     );
   }, [points, activeModelNames, activeTopicNames, activeSettingNames]);
 
+  // 🆕 Cartes mises à jour avec les vraies métriques calculées
   const dynamicStats = useMemo(() => {
     return [
       { 
@@ -79,25 +104,45 @@ export default function App() {
       },
       { 
         title: 'PHRASES', 
-        value: formatCompactNumber(globalStats.totalPhrases), 
+        value: formatCompactNumber(filteredPoints.length), 
         icon: 'description', 
         iconColor: '#059669' 
       },
       { 
         title: 'MODELS', 
-        value: models.length, 
+        value: activeModelNames.length, 
         icon: 'robot_2', 
         iconColor: '#7C3AED' 
       },
       { 
         title: 'TOPICS', 
-        value: topics.length,
+        value: activeTopicNames.length,
         icon: 'lab_research', 
         iconColor: '#D97706' 
+      },
+      { 
+        title: 'HSD', 
+        value: diversity.avg_hsd.toFixed(2), 
+        icon: 'hub', 
+        iconColor: '#EC4899',
+        tooltip: 'Hill-Shannon Diversity - Averaged across active topics'
+      },
+      { 
+        title: 'VS', 
+        value: diversity.avg_vs.toFixed(2), 
+        icon: 'insights', 
+        iconColor: '#8B5CF6',
+        tooltip: 'Spectral Diversity averaged across active topics'
+      },
+      { 
+        title: 'CD', 
+        value: diversity.global_cd.toFixed(3), 
+        icon: 'straighten', 
+        iconColor: '#10B981',
+        tooltip: 'Global Cosine Distance across all displayed claims'
       }
     ];
-  }, [globalStats, models, topics.length, filteredPoints.length]);
-
+  }, [globalStats, activeModelNames, activeTopicNames, filteredPoints.length, diversity]);
 
   if (error) {
     return (
@@ -148,7 +193,7 @@ export default function App() {
 
         <div className="stats-row">
           {loading ? (
-            Array.from({ length: 4 }).map((_, index) => (
+            Array.from({ length: 7 }).map((_, index) => (
               <StatCardSkeleton key={index} />
             ))
           ) : (
@@ -159,6 +204,7 @@ export default function App() {
                 value={stat.value}
                 icon={stat.icon}
                 iconColor={stat.iconColor}
+                tootlip={stat.tooltip}
               />
             ))
           )}
