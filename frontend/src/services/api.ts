@@ -5,6 +5,15 @@ export interface DashboardStats {
     total_embedded_phrases: number;
 }
 
+// 🆕 Interface pour la réponse de l'overview de diversité
+export interface DiversityOverview {
+    avg_hsd: number;
+    avg_vs: number;
+    global_cd: number;
+    total_topics: number;
+    total_points: number;
+}
+
 export interface RawDashboardFilters {
     models: string[];
     topics: string[];
@@ -62,8 +71,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const fetchDashboardData = async () => {
     try {
-        const filtersRes = await fetch(`${API_BASE_URL}/api/meta`)
-        const pointsRes = await fetch(`${API_BASE_URL}/api/points`)
+        const filtersRes = await fetch(`${API_BASE_URL}/api/meta`);
+        const pointsRes = await fetch(`${API_BASE_URL}/api/points`);
 
         if (!filtersRes.ok) {
             throw new Error(`Error requesting metadata (Status: ${filtersRes.status})`);
@@ -87,19 +96,42 @@ export const fetchDashboardData = async () => {
             active: true
         }));
 
-        // 🆕 Transformation des settings pour ton interface de filtres
         const settings: FilterItem[] = rawFilters.settings.map(name => ({
             name,
-            color: getColorFromString(name), // Donne une couleur unique ou une couleur fixe
+            color: getColorFromString(name),
             active: true
         }));
 
         const stats = rawFilters.stats;
 
-        // 🆕 On retourne également les 'settings' au composant React !
         return { models, topics, settings, points, stats };
     } catch(error) {
-        console.error("Erreur API:", error)
+        console.error("Erreur API:", error);
+        throw error;
+    }
+};
+
+// 🆕 Fonction pour récupérer les métriques dynamiques (Ticket #57)
+export const fetchDiversityOverview = async (
+    models?: string[],
+    topics?: string[],
+    settings?: string[]
+): Promise<DiversityOverview> => {
+    try {
+        const params = new URLSearchParams();
+        models?.forEach(m => params.append("models", m));
+        topics?.forEach(t => params.append("topics", t));
+        settings?.forEach(s => params.append("settings", s));
+
+        const response = await fetch(`${API_BASE_URL}/api/diversity-overview?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error(`Error fetching diversity overview (Status: ${response.status})`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("API error fetching diversity overview:", error);
         throw error;
     }
 };
@@ -112,8 +144,7 @@ export const fetchPointDetails = async (pointId: number): Promise<PointDetailsRe
             throw new Error(`Erreur lors de la récupération des détails (Status: ${response.status})`);
         }
 
-        const data: PointDetailsResponse = await response.json();
-        return data;
+        return await response.json();
     } catch (error) {
         console.error(`Erreur API sur les détails du point ${pointId}:`, error);
         throw error;
@@ -128,10 +159,9 @@ export const fetchSourceTextData = async (pointId: number): Promise<SourceTextDa
             throw new Error(`Error requesting the point source text (Status: ${response.status})`);
         }
 
-        const data: SourceTextData = await response.json();
-        return data;
+        return await response.json();
     } catch (error) {
         console.error(`API error fetching the point source text ${pointId}:`, error);
         throw error;
     }
-}
+};
