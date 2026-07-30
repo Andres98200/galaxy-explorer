@@ -16,7 +16,7 @@
 
 .stats-row {
   display: flex;
-  gap: 24px;
+  gap: 4px;
   width: 100%;
   justify-content: center;
   background-color: var(--header);
@@ -25,7 +25,7 @@
 
 .stat-card {
   flex: none;
-  width: 218px;
+  width: 200px;
   background-color: var(--bg-card);
   border-radius: 20px;
   padding: 20px;
@@ -36,30 +36,6 @@
 
 }
 
-.fetching-card{
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background-color: rgb(217, 224, 250);
-  border-radius: 15px;
-  border: 1px solid rgb(217, 224, 250);
-  padding: 16px 20px;
-  max-width: 500px;
-  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
-  margin: 20px auto;
-}
-
-.fetch-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgb(56, 121, 241);
-  color: #FFFFFF;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 
 @keyframes spin {
   from {
@@ -72,19 +48,6 @@
 .spin-animation{
   display: inline-block;
   animation: spin 2s linear infinite;
-}
-
-.fetch-text-container {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  flex-grow: 1;
-}
-
-.fetch-title {
-  margin: 0;
-  font-size: 1rem;
-  color: #4A4A4A;
 }
 
 .stat-error-card{
@@ -131,11 +94,6 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   font-weight: 500;
 }
 
-.stat-card:hover {
-  transform: scale(1.1);
-
-}
-
 .stat-card-content {
   height: 48px;
   display: flex;
@@ -165,9 +123,13 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   color: var(--card-content-text);
   font-size: 1.8rem;
   font-weight: 700;
-  text-align: left;
+  text-align: left
 }
-
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: help;
+}
 
 .content-grid {
   flex: 1;
@@ -1142,29 +1104,36 @@ tr:nth-child(even) {
 
 @media (min-width: 1440px) and (max-width: 1920px) {
 
-  .sidebar {
+  .sidebar{
     width: 300px;
     padding: 40px 28px;
   }
 
-  .stat-card {
-    height: 55px;
-    width: 165px;
+  .stat-card{
+    height: 50px;
+    width: 140px;
+    margin: 10px;
   }
 
-  .stat-card-title{
-    font-size: 0.8rem;
+  .stat-card-title, .stat-card-title-skeleton{
+    font-size: 0.7rem;
   }
 
-  .stat-card-value {
-    font-size: 1.4rem;
+  .stat-card-value, .stat-card-value-skeleton{
+    font-size: 1.5rem;
+  }
+  .stat-card-icon, .stat-card-icon-skeleton {
+    width: 45px;
+    height: 45px;
+
   }
 
-.details-panel-container {
+  .details-panel-container {
    width: min(500px, 28vw);
     height: 650px;
     overflow-y: auto;
-}
+  }
+
   .details-panel-container-2 {
     width: min(500px, 28vw);
     height: 650px; 
@@ -1172,9 +1141,11 @@ tr:nth-child(even) {
     flex-direction: column;
     overflow: hidden;
   }
+
   .is-prompt {
     max-height: 500px;
   }
+
   .is-response {
     max-height: 400px;
   }
@@ -1186,6 +1157,76 @@ tr:nth-child(even) {
   .checkbox-list {
     max-height: 100px;
   }
+
+  .sidebar-skeleton-content {
+  width: 200px;
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow);
+  border-radius: 0px 0px 0px 15px;
+  padding: 20px 10px;
+  display : flex;
+  flex-direction: column;
+  gap: 32px; 
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.select-box-skeleton {
+  justify-content: space-between;
+  box-sizing: border-box;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.btn-show-more-skeleton { 
+  border: none;
+  text-align: right;
+  display: inline-flex;
+  align-self: flex-end;
+  margin-left: auto;
+  padding-top: 5px;
+  height: 5px;
+  width: 70px;
+  border-radius: 5px;
+
+}
+
+.tag-skeleton {
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  width: 100%;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+.btn-search-all-topic-skeleton {
+  border: none;
+  border-radius: 5px;
+  width: 25px;
+  height: 25px;
+}
+
+.checkbox-list-skeleton{
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: 25px;
+  width: 100%;
+  padding-right: 15px;
+  border-radius: 5px;
+}
+.filters-header-skeleton {
+  display: grid;
+  grid-template-columns: auto auto;
+  font-size: 1rem;
+  border-radius: 5px;
+  height: 15px;
+  width: 100px;
+  
+}
 }
 
 @media (min-width: 2560px) {
