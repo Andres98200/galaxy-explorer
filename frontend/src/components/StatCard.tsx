@@ -3,11 +3,12 @@ interface StatCardProps {
     value: string | number;
     icon: string;
     iconColor: string;
+    tootlip?: string;
 }
 
-export default function StatCard({ title, value, icon, iconColor }: StatCardProps) {
+export default function StatCard({ title, value, icon, iconColor, tootlip }: StatCardProps) {
     return (
-        <div className="stat-card">
+        <div className="stat-card" title={tootlip}>
                 <span 
                 className="material-symbols-outlined stat-card-icon"
                 style={{ backgroundColor: `${iconColor}15`, color: iconColor}}

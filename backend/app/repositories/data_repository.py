@@ -1,7 +1,11 @@
 import sqlite3
 import time
-from typing import List, Dict, Any, Optional
 import pandas as pd
+import numpy as np
+from collections import Counter
+from scipy.stats import entropy
+from typing import List, Dict, Any, Optional
+
 
 class DataRepository:
     def __init__(self):
@@ -19,7 +23,6 @@ class DataRepository:
         cursor.execute("SELECT DISTINCT topic FROM galaxy_points WHERE topic IS NOT NULL")
         self.cached_topics = [r[0] for r in cursor.fetchall()]
 
-        # 🆕 Récupération et mise en cache des settings uniques au démarrage
         cursor.execute("SELECT DISTINCT setting FROM galaxy_points WHERE setting IS NOT NULL")
         self.cached_settings = [r[0] for r in cursor.fetchall()]
         
@@ -39,7 +42,7 @@ class DataRepository:
         return {
             "models": sorted(self.cached_models),
             "topics": sorted(self.cached_topics),
-            "settings": sorted(self.cached_settings), # 🆕 Renvoyé à l'API Meta
+            "settings": sorted(self.cached_settings),
             "stats": {
                 "total_dataset_scanned": 4000000,
                 "total_embedded_phrases": self.total_cached_points
@@ -48,14 +51,13 @@ class DataRepository:
         
     def get_filtered_points(
         self, 
-        selected_models: Optional[List[str]], 
-        selected_topics: Optional[List[str]],
-        selected_settings: Optional[List[str]] = None # 🆕 Paramètre optionnel ajouté
+        selected_models: Optional[List[str]] = None, 
+        selected_topics: Optional[List[str]] = None,
+        selected_settings: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        # 🆕 'setting' est maintenant inclus dans le SELECT
         query = "SELECT id, phrase, topic, model, cluster, prompt_index, x, y, z, setting FROM galaxy_points WHERE 1=1"
         params = []
         
@@ -65,7 +67,6 @@ class DataRepository:
         if selected_topics:
             query += f" AND topic IN ({','.join(['?'] * len(selected_topics))})"
             params.extend(selected_topics)
-        # 🆕 Filtrage SQL direct par setting (ift / rag)
         if selected_settings:
             query += f" AND setting IN ({','.join(['?'] * len(selected_settings))})"
             params.extend(selected_settings)
@@ -118,7 +119,6 @@ class DataRepository:
         total_models = len(cluster_df) if len(cluster_df) > 0 else 1
         model_list = [{"name": str(m), "percentage": int(c / total_models * 100)} for m, c in model_counts.items()]
 
-        # 🏎️ Optimisation SQL pour la recherche des voisins (Évite de saturer la RAM)
         cursor.execute(
             """
             SELECT id, topic, 
@@ -190,3 +190,138 @@ class DataRepository:
                 
         print(f"❌ [Source-Text API] Text context not found.\n")
         return {"error": "Text context not found"}
+
+    def _calculate_diversity_from_clusters(self, cluster_list: List[int]) -> float:
+        """
+        Calcul de l'entropie Hill-Shannon par topic : HSD = exp(Entropy)
+        """
+        valid_clusters = [c for c in cluster_list if c is not None and c >= 0]
+        if not valid_clusters:
+            return 0.0
+
+        counts = Counter(valid_clusters)
+        total = len(valid_clusters)
+        probs = [cnt / total for cnt in counts.values()]
+
+        ent = entropy(probs) if sum(probs) > 0 else 0.0
+        hillshannon = np.exp(ent) if ent > 0 else 0.0
+
+        return float(hillshannon)
+
+    def _calculate_vendi_score(self, coords_matrix: np.ndarray) -> float:
+        """
+        Calcul du Vendi Score officiel (spectral) par topic :
+        VS = exp(- sum(lambda_i * log(lambda_i))) sur la matrice de noyau cosinus.
+        """
+        if len(coords_matrix) < 2:
+            return 1.0
+        
+        norms = np.linalg.norm(coords_matrix, axis=1, keepdims=True)
+        norms[norms == 0] = 1e-10
+        normalized = coords_matrix / norms
+        
+        N = len(normalized)
+        K = np.dot(normalized, normalized.T) / N
+        
+        eigenvalues = np.linalg.eigvalsh(K)
+        eigenvalues = eigenvalues[eigenvalues > 1e-10]
+        
+        ent = -np.sum(eigenvalues * np.log(eigenvalues))
+        vs = np.exp(ent)
+        return float(vs)
+
+    def get_diversity_overview(
+        self, 
+        selected_models: Optional[List[str]] = None,
+        selected_topics: Optional[List[str]] = None,
+        selected_settings: Optional[List[str]] = None
+    ) -> Dict[str, float]:
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        
+        query = "SELECT topic, cluster, x, y, z FROM galaxy_points WHERE 1=1"
+        params = []
+
+        if selected_models:
+            query += f" AND model IN ({','.join(['?'] * len(selected_models))})"
+            params.extend(selected_models)
+        if selected_topics:
+            query += f" AND topic IN ({','.join(['?'] * len(selected_topics))})"
+            params.extend(selected_topics)
+        if selected_settings:
+            query += f" AND setting IN ({','.join(['?'] * len(selected_settings))})"
+            params.extend(selected_settings)
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            return {
+                "avg_hsd": 0.0, 
+                "avg_vs": 0.0, 
+                "global_cd": 0.0, 
+                "total_topics": 0, 
+                "total_points": 0
+            }
+
+        df = pd.DataFrame([dict(r) for r in rows])
+
+        # ---------------------------------------------------------------------
+        # 1. HSD & VS : Calculs PAR TOPIC puis MOYENNE (Moyenner sur tous les topics)
+        # ---------------------------------------------------------------------
+        topic_hsd_scores = []
+        topic_vs_scores = []
+
+        for topic_name, group in df.groupby("topic"):
+            # A. HSD par topic
+            valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
+            if valid_clusters:
+                hsd_val = self._calculate_diversity_from_clusters(valid_clusters)
+                if hsd_val > 0:
+                    topic_hsd_scores.append(hsd_val)
+
+            # B. Vendi Score par topic
+            topic_coords = group[["x", "y", "z"]].to_numpy()
+            if len(topic_coords) > 1:
+                vs_val = self._calculate_vendi_score(topic_coords)
+                topic_vs_scores.append(vs_val)
+
+        avg_hsd = float(np.mean(topic_hsd_scores)) if topic_hsd_scores else 0.0
+        avg_vs = float(np.mean(topic_vs_scores)) if topic_vs_scores else 0.0
+
+        # ---------------------------------------------------------------------
+        # 2. Distance Cosinus (CD) GLOBALE sur TOUS les claims/points affichés
+        # ---------------------------------------------------------------------
+        coords = df[["x", "y", "z"]].to_numpy()
+        global_cd = 0.0
+        
+        if len(coords) > 1:
+            # Échantillonnage si > 1000 points pour préserver une réponse ultra-rapide (< 15ms)
+            if len(coords) > 1000:
+                idx = np.random.choice(len(coords), 1000, replace=False)
+                sample_coords = coords[idx]
+            else:
+                sample_coords = coords
+
+            # Normalisation pour la Cosine Distance : 1 - cos(theta)
+            norms = np.linalg.norm(sample_coords, axis=1, keepdims=True)
+            norms[norms == 0] = 1e-10
+            normalized = sample_coords / norms
+            
+            # Matrice de similarité cosinus
+            cos_sim_matrix = np.dot(normalized, normalized.T)
+            # Distance Cosinus = 1 - similarité
+            cos_dist_matrix = 1.0 - cos_sim_matrix
+            
+            # Moyenne sur toutes les paires uniques de claims (triangle supérieur)
+            triu_indices = np.triu_indices_from(cos_dist_matrix, k=1)
+            global_cd = float(np.mean(cos_dist_matrix[triu_indices]))
+
+        return {
+            "avg_hsd": round(avg_hsd, 3),
+            "avg_vs": round(avg_vs, 3),
+            "global_cd": round(global_cd, 3),
+            "total_topics": int(df["topic"].nunique()),
+            "total_points": len(df)
+        }

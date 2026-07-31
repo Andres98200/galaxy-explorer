@@ -63,3 +63,18 @@ def get_point_source_text(point_id: int):
     if "error" in source_data:
         raise HTTPException(status_code=404, detail=source_data["error"])
     return source_data
+
+@app.get("/api/diversity-overview")
+def get_diversity_overview(
+    models: Optional[List[str]] = Query(None),
+    topics: Optional[List[str]] = Query(None),
+    settings: Optional[List[str]] = Query(None)
+):
+    """
+    Endpoint pour la boîte 'Overview' (Ticket #57).
+    """
+    return repo.get_diversity_overview(
+        selected_models=models,
+        selected_topics=topics,
+        selected_settings=settings
+    )
