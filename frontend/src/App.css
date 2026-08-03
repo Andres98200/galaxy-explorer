@@ -372,12 +372,13 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 }
 
 .btn-select-all-topic, .btn-search-all-topic{
-  background-color: var(--select-color);
   border: none;
   border-radius: 5px;
   cursor: pointer;
   width: 25px;
   height: 25px;
+  background-color: var(--bg-card);
+  color: var(--card-title-text)
 }
 
 .btn-search-all-topic-skeleton {
@@ -387,9 +388,47 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   height: 25px;
 }
 
+.diversity-section {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-diversity-modal{
+  background-color: var(--bg-card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb; /* Bordure discrète et arrondie */
+  height: 55px;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text)
+}
+
+.open-modal {
+  display: flex;
+  font-size: 1.5rem;
+
+}
+
+.diversity-title {
+  display: flex;
+  font-size: larger;
+  font-weight: 600;
+}
+
+.btn-diversity-modal:hover {
+  color: var(--select-color);  
+}
+
 
 .btn-deselect-all-topic{
-  background-color: var(--deselect-color);
+  background-color: var(--bg-card);
+  color: var(--card-title-text);
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -402,15 +441,15 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   align-items: center;
   justify-content: center;
   border-radius: 16px;
-  font-size: 1.35rem;
+  font-size: 1.5rem;
 }
 
 .btn-select-all-topic:hover, .btn-search-all-topic:hover {
-  background-color: #8983f3;
+  color: #635bf1;
 }
 
 .btn-deselect-all-topic:hover {
-  background-color: #e77676;
+  color: #e94242;
 
 }
 
@@ -449,7 +488,8 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 
 .tag-pill{
   background-color: #EEF2FF;
-  border: 1px solid #E0E7FF;           
+  border: 1px solid #E0E7FF;
+  box-shadow: 0 1 2;         
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 500;

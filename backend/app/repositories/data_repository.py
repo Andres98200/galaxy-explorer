@@ -325,3 +325,59 @@ class DataRepository:
             "total_topics": int(df["topic"].nunique()),
             "total_points": len(df)
         }
+
+    def get_diversity_matrix(self) -> List[Dict[str, Any]]:
+        """
+        Calcule les métriques HSD, VS et CD pour chaque combinaison (model, setting, topic).
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        
+        # Récupération de tous les points nécessaires
+        query = "SELECT model, setting, topic, cluster, x, y, z FROM galaxy_points"
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            return []
+
+        df = pd.DataFrame([dict(r) for r in rows])
+        results = []
+
+        # Groupement par (Model, Setting, Topic)
+        grouped = df.groupby(["model", "setting", "topic"])
+
+        for (model, setting, topic), group in grouped:
+            # 1. HSD par topic
+            valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
+            hsd_val = self._calculate_diversity_from_clusters(valid_clusters) if valid_clusters else 0.0
+
+            # 2. Vendi Score par topic
+            coords = group[["x", "y", "z"]].to_numpy()
+            vs_val = self._calculate_vendi_score(coords) if len(coords) > 1 else 1.0
+
+            # 3. Distance Cosinus (CD) par phrase/sentence
+            cd_val = 0.0
+            if len(coords) > 1:
+                norms = np.linalg.norm(coords, axis=1, keepdims=True)
+                norms[norms == 0] = 1e-10
+                normalized = coords / norms
+                
+                cos_sim_matrix = np.dot(normalized, normalized.T)
+                cos_dist_matrix = 1.0 - cos_sim_matrix
+                
+                triu_indices = np.triu_indices_from(cos_dist_matrix, k=1)
+                if len(triu_indices[0]) > 0:
+                    cd_val = float(np.mean(cos_dist_matrix[triu_indices]))
+
+            results.append({
+                "model": model,
+                "setting": setting,
+                "topic": topic,
+                "hsd": round(hsd_val, 3),
+                "vs": round(vs_val, 3),
+                "cd": round(cd_val, 3)
+            })
+
+        return results
