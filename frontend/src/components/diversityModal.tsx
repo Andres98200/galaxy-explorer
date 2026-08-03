@@ -35,7 +35,7 @@ export default function DiversityModal({
   availableTopics,
   onSaveFilters
 }: DiversityModalProps) {
-  const [showTopicColumn, setShowTopicColumn] = useState<boolean>(false);
+  const [showTopicColumn, setShowTopicColumn] = useState<boolean>(true);
 
   const [selectedModels, setSelectedModels] = useState<string[]>(availableModels);
   const [selectedSettings, setSelectedSettings] = useState<string[]>(availableSettings);
@@ -44,7 +44,9 @@ export default function DiversityModal({
   const [sortField, setSortField] = useState<SortField>('hsd');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Synchronise les filtres internes quand les props disponibles ou isOpen changent
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [settingDropdownOpen, setSettingDropdownOpen] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setSelectedModels(availableModels);
@@ -153,79 +155,140 @@ export default function DiversityModal({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-container">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
         <div className="modal-header">
-          <h2>📊 Diversity Matrix Overview</h2>
+          <h2>Diversity Explorer</h2>
           <button className="modal-close-icon" onClick={onClose}>
             &times;
           </button>
         </div>
 
+        {/* Filters Bar */}
         <div className="modal-filters-bar">
-          <label className="topic-toggle-label">
-            <input
-              type="checkbox"
-              checked={showTopicColumn}
-              onChange={e => setShowTopicColumn(e.target.checked)}
-            />
-            <span>Show Topic Column (Detailed View)</span>
-          </label>
+          
+          {/* Filter Model */}
+          <div className="filter-item">
+            <span className="filter-label">MODEL</span>
+            <div className="custom-select-wrapper">
+              <button 
+                className="custom-select-btn"
+                onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+              >
+                <span>
+                  {selectedModels.length === availableModels.length
+                    ? 'All models'
+                    : `${selectedModels.length} selected`}
+                </span>
+                <span className="chevron material-symbols-outlined">keyboard_arrow_down</span>
+              </button>
 
-          <div className="filter-group">
-            <strong>Models:</strong>
-            <div className="filter-chips">
-              {availableModels.map(m => (
-                <button
-                  key={m}
-                  className={`chip ${selectedModels.includes(m) ? 'active' : ''}`}
-                  onClick={() => toggleSelection(m, selectedModels, setSelectedModels)}
-                >
-                  {m}
-                </button>
-              ))}
+              {modelDropdownOpen && (
+                <div className="custom-dropdown-menu">
+                  <div className="modal-checkbox-list">
+                    {availableModels.map(m => (
+                      <label key={m} className="modal-checkbox-item" title={m}>
+                        <input
+                          type="checkbox"
+                          checked={selectedModels.includes(m)}
+                          onChange={() => toggleSelection(m, selectedModels, setSelectedModels)}
+                        />
+                        <span className="modal-checkbox-label">{m}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="filter-group">
-            <strong>Settings:</strong>
-            <div className="filter-chips">
-              {availableSettings.map(s => (
-                <button
-                  key={s}
-                  className={`chip ${selectedSettings.includes(s) ? 'active' : ''}`}
-                  onClick={() => toggleSelection(s, selectedSettings, setSelectedSettings)}
-                >
-                  {s}
-                </button>
-              ))}
+          {/* Filter Setting */}
+          <div className="filter-item">
+            <span className="filter-label">SETTING</span>
+            <div className="custom-select-wrapper">
+              <button 
+                className="custom-select-btn"
+                onClick={() => setSettingDropdownOpen(!settingDropdownOpen)}
+              >
+                <span>
+                  {selectedSettings.length === availableSettings.length
+                    ? 'Default (Base)'
+                    : `${selectedSettings.length} selected`}
+                </span>
+                <span className="chevron material-symbols-outlined">keyboard_arrow_down</span>
+              </button>
+
+              {settingDropdownOpen && (
+                <div className="custom-dropdown-menu">
+                  <div className="modal-checkbox-list">
+                    {availableSettings.map(s => (
+                      <label key={s} className="modal-checkbox-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedSettings.includes(s)}
+                          onChange={() => toggleSelection(s, selectedSettings, setSelectedSettings)}
+                        />
+                        <span className="modal-checkbox-label">{s}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <div className="toggle-container">
+            <span className="toggle-text">Details by Topic</span>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={showTopicColumn}
+                onChange={e => setShowTopicColumn(e.target.checked)}
+              />
+              <span className="slider round"></span>
+            </label>
           </div>
         </div>
 
+        {/* Table Area */}
         <div className="modal-table-container">
           <table className="diversity-matrix-table">
             <thead>
               <tr>
                 <th onClick={() => handleSort('model')}>
-                  Model {sortField === 'model' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  <span className="th-content">
+                    MODEL <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                  </span>
                 </th>
                 <th onClick={() => handleSort('setting')}>
-                  Setting {sortField === 'setting' && (sortOrder === 'asc' ? '▲' : '▼')}
+                  <span className="th-content">
+                    SETTING <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                  </span>
                 </th>
                 {showTopicColumn && (
                   <th onClick={() => handleSort('topic')}>
-                    Topic {sortField === 'topic' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    <span className="th-content">
+                      TOPIC <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                    </span>
                   </th>
                 )}
-                <th onClick={() => handleSort('hsd')}>
-                  Avg HSD {sortField === 'hsd' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('hsd')} className="text-right">
+                  <span className="th-content">
+                    HSD <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                  </span>
                 </th>
-                <th onClick={() => handleSort('vs')}>
-                  Avg VS {sortField === 'vs' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('vs')} className="text-right">
+                  <span className="th-content">
+                    VENDI (VS) <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                  </span>
                 </th>
-                <th onClick={() => handleSort('cd')}>
-                  Avg CD {sortField === 'cd' && (sortOrder === 'asc' ? '▲' : '▼')}
+                <th onClick={() => handleSort('cd')} className="text-right">
+                  <span className="th-content">
+                    COSINE (CD) <span className="sort-icon material-symbols-outlined">swap_vert</span>
+                  </span>
                 </th>
               </tr>
             </thead>
@@ -233,22 +296,18 @@ export default function DiversityModal({
               {sortedData.length > 0 ? (
                 sortedData.map((row, i) => (
                   <tr key={i}>
-                    <td>
-                      <strong>{row.model}</strong>
-                    </td>
-                    <td>
-                      <span className="badge-setting">{row.setting}</span>
-                    </td>
-                    {showTopicColumn && <td>{row.topic}</td>}
-                    <td>{row.hsd.toFixed(3)}</td>
-                    <td>{row.vs.toFixed(3)}</td>
-                    <td>{row.cd.toFixed(3)}</td>
+                    <td className="col-model">{row.model}</td>
+                    <td className="col-setting">{row.setting}</td>
+                    {showTopicColumn && <td className="col-topic">{row.topic}</td>}
+                    <td className="col-number text-right">{row.hsd.toFixed(3)}</td>
+                    <td className="col-number text-right">{row.vs.toFixed(2)}</td>
+                    <td className="col-number text-right">{row.cd.toFixed(3)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td colSpan={showTopicColumn ? 6 : 5} className="no-data">
-                    No data matching selected filters.
+                    No data matching the selected filters.
                   </td>
                 </tr>
               )}
@@ -256,14 +315,16 @@ export default function DiversityModal({
           </table>
         </div>
 
+        {/* Footer */}
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>
             Cancel
           </button>
           <button className="btn-apply" onClick={handleSaveAndApply}>
-            Save Filters & Apply to Galaxy
+            Save and update galaxy
           </button>
         </div>
+
       </div>
     </div>
   );
