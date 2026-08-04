@@ -391,12 +391,11 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 .diversity-section {
   display: flex;
   justify-content: center;
+  margin-top: auto;
 }
 
 .btn-diversity-modal{
   background-color: var(--bg-card);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e5e7eb; /* Bordure discrète et arrondie */
   height: 55px;
   width: 100%;
   border: none;
@@ -404,9 +403,14 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
   border-radius: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content:center;
   gap: 10px;
-  color: var(--text)
+  color: var(--card-content-text);
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: -30px;
+  margin-left: -24px;
+  margin-right: -24px;
 }
 
 .open-modal {
@@ -417,14 +421,15 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 
 .diversity-title {
   display: flex;
-  font-size: larger;
   font-weight: 600;
+  font-size: 1rem;
+
 }
 
 .btn-diversity-modal:hover {
-  color: var(--select-color);  
+  background-color: #EEF2FF;
+  color: var(--select-color);
 }
-
 
 .btn-deselect-all-topic{
   background-color: var(--bg-card);
@@ -654,6 +659,7 @@ box-shadow: 0 4px 12px rgba(255, 0, 0, 0.03);
 
 .logo-text {
   font-weight: 700;
+  font-size: 1rem;
   font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -1597,6 +1603,19 @@ input:checked + .slider:before {
   background: #4338ca;
 }
 
+.btn-diversity-modal.loading .open-modal {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Full responsive layout overrides */
 
 
@@ -1737,7 +1756,7 @@ input:checked + .slider:before {
 .logo-text {
   font-weight: 700;
   font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-size: smaller;
+  font-size: 1.25rem;
 }
 
 .logo-container:hover {
@@ -2118,8 +2137,6 @@ input:checked + .slider:before {
     gap: 8px;
   }
 }
-
-
 /* SKELETONS */
 
 .sidebar-skeleton-content {

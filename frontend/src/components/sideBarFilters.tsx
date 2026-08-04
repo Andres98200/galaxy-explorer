@@ -48,7 +48,6 @@ export default function SidebarFilters({
   };
 
   const activeModels = models.filter(m => m.active);
-  // Si showAllModels est false, on limite l'affichage aux 6 premiers
   const displayedActiveModels = showAllModels ? activeModels : activeModels.slice(0, 6);
 
   const filteredModelsPool = models
@@ -323,14 +322,18 @@ export default function SidebarFilters({
 
       <div className='diversity-section'>
         <button 
-          className='btn-diversity-modal' 
+          className={`btn-diversity-modal ${isLoadingMatrix ? 'loading' : ''}`} 
           onClick={onOpenDiversityModal}
           disabled={isLoadingMatrix}
         >
-          <span className='material-symbols-outlined open-modal'>map_search</span>
+          <span className='material-symbols-outlined open-modal loading'>
+             {isLoadingMatrix ? "cycle" : "explore"}
+          </span>
+          <div className='diversity-title'>
+           Diversity Explorer
+          </div>
         </button>
       </div>
-
     </aside>
   )
 }

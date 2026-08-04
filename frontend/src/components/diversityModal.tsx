@@ -37,9 +37,9 @@ export default function DiversityModal({
 }: DiversityModalProps) {
   const [showTopicColumn, setShowTopicColumn] = useState<boolean>(true);
 
-  const [selectedModels, setSelectedModels] = useState<string[]>(availableModels);
-  const [selectedSettings, setSelectedSettings] = useState<string[]>(availableSettings);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>(availableTopics);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [selectedSettings, setSelectedSettings] = useState<string[]>([]);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
   const [sortField, setSortField] = useState<SortField>('hsd');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -47,17 +47,20 @@ export default function DiversityModal({
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [settingDropdownOpen, setSettingDropdownOpen] = useState(false);
 
+  // 🛠️ FIX : On synchronise les filtres UNIQUEMENT à l'ouverture de la modal
   useEffect(() => {
     if (isOpen) {
       setSelectedModels(availableModels);
       setSelectedSettings(availableSettings);
       setSelectedTopics(availableTopics);
     }
-  }, [isOpen, availableModels, availableSettings, availableTopics]);
+  }, [isOpen]); 
 
   if (!isOpen) return null;
 
+  // 🛠️ FIX : Sécurité si matrixData est vide/non chargée
   const filteredData = useMemo(() => {
+    if (!matrixData || matrixData.length === 0) return [];
     return matrixData.filter(
       row =>
         selectedModels.includes(row.model) &&
