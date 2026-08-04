@@ -5,13 +5,16 @@ import SideBarFilters from './components/sideBarFilters'
 import { 
   fetchDashboardData, 
   fetchDiversityOverview, 
+  fetchDiversityMatrix, 
   type FilterItem, 
   type GalaxyPoints, 
-  type DiversityOverview 
+  type DiversityOverview, 
+  type DiversityMatrixRow 
 } from '../src/services/api.ts'
 import GalaxyCanvas from './components/galaxyCanvas.tsx'
 import SideBarFilterSkeleton from './components/Skeletons/SideBarSkeleton.tsx'
 import StatCardSkeleton from './components/Skeletons/StatCardSkeleton.tsx'
+import DiversityModal from './components/diversityModal.tsx'
 
 function formatCompactNumber(number: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -28,7 +31,7 @@ export default function App() {
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
   const [settings, setSettings] = useState<FilterItem[]>([]);
 
-  // 🆕 État pour les métriques de diversité (HSD, VS, CD)
+  // Métriques de diversité (HSD, VS, CD)
   const [diversity, setDiversity] = useState<DiversityOverview>({
     avg_hsd: 0,
     avg_vs: 0,
@@ -36,6 +39,10 @@ export default function App() {
     total_topics: 0,
     total_points: 0
   });
+
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [matrixData, setMatrixData] = useState<DiversityMatrixRow[]>([]);
+  const [isLoadingMatrix, setIsLoadingMatrix] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +82,12 @@ export default function App() {
   const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
   const activeSettingNames = useMemo(() => settings.filter(s => s.active).map(s => s.name), [settings]);
 
-  // 🆕 Mise à jour dynamique des cartes lors d'un changement de filtres
+  // Listes complètes pour le modal
+  const availableModelNames = useMemo(() => models.map(m => m.name), [models]);
+  const availableSettingNames = useMemo(() => settings.map(s => s.name), [settings]);
+  const availableTopicNames = useMemo(() => topics.map(t => t.name), [topics]);
+
+  // Mise à jour dynamique des cartes lors d'un changement de filtres
   useEffect(() => {
     if (loading) return;
 
@@ -83,6 +95,29 @@ export default function App() {
       .then((data) => setDiversity(data))
       .catch((err) => console.error("Error fetching overview metrics:", err));
   }, [activeModelNames, activeTopicNames, activeSettingNames, loading]);
+
+  const handleOpenDiversityModal = async () => {
+    setIsLoadingMatrix(true);
+    try {
+      const data = await fetchDiversityMatrix();
+      setMatrixData(data);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error("Error fetching matrix data:", err);
+    } finally {
+      setIsLoadingMatrix(false);
+    }
+  };
+
+  const handleSaveFiltersFromModal = (
+    selectedModels: string[],
+    selectedSettings: string[],
+    selectedTopics: string[]
+  ) => {
+    setModels(prev => prev.map(m => ({ ...m, active: selectedModels.includes(m.name) })));
+    setSettings(prev => prev.map(s => ({ ...s, active: selectedSettings.includes(s.name) })));
+    setTopics(prev => prev.map(t => ({ ...t, active: selectedTopics.includes(t.name) })));
+  };
 
   // Filtrage des points pour la 3D
   const filteredPoints = useMemo(() => {
@@ -93,7 +128,7 @@ export default function App() {
     );
   }, [points, activeModelNames, activeTopicNames, activeSettingNames]);
 
-  // 🆕 Cartes mises à jour avec les vraies métriques calculées
+  // Cartes mises à jour avec les métriques calculées
   const dynamicStats = useMemo(() => {
     return [
       { 
@@ -175,18 +210,22 @@ export default function App() {
       {isMenuOpen && <div className="sidebar-overlay" onClick={closeMenu} />}
 
       <aside className={`sidebar-placeholder ${isMenuOpen ? "open": ""}`}>
-       {loading ? (
-        <SideBarFilterSkeleton/>
-       ): (
-        <SideBarFilters 
-          models={models}
-          setModels={setModels}
-          topics={topics}
-          setTopics={setTopics}
-          settings={settings}
-          setSettings={setSettings}
-        />
-       )}
+        {loading ? (
+          <SideBarFilterSkeleton/>
+        ) : (
+          <>
+            <SideBarFilters 
+              models={models}
+              setModels={setModels}
+              topics={topics}
+              setTopics={setTopics}
+              settings={settings}
+              setSettings={setSettings}
+              onOpenDiversityModal={handleOpenDiversityModal}
+              isLoadingMatrix={isLoadingMatrix}
+            />
+          </>
+        )}
       </aside>
 
       <main className="main-content">
@@ -213,8 +252,17 @@ export default function App() {
         <div className="content-grid">
           <GalaxyCanvas points={filteredPoints} topics={topics} />
         </div>
-
       </main>
+
+      <DiversityModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        matrixData={matrixData}
+        availableModels={availableModelNames}
+        availableSettings={availableSettingNames}
+        availableTopics={availableTopicNames}
+        onSaveFilters={handleSaveFiltersFromModal}
+      />
     </div>
   );
 }

@@ -9,6 +9,9 @@ interface SideBarFiltersProps {
   setTopics: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   settings: FilterItem[];
   setSettings: React.Dispatch<React.SetStateAction<FilterItem[]>>;
+  // 🆕 Prop pour déclencher l'ouverture de la matrice
+  onOpenDiversityModal: () => void;
+  isLoadingMatrix?: boolean;
 }
 
 export default function SidebarFilters({
@@ -17,7 +20,9 @@ export default function SidebarFilters({
   topics, 
   setTopics,
   settings,       
-  setSettings     
+  setSettings,
+  onOpenDiversityModal,
+  isLoadingMatrix = false
 }: SideBarFiltersProps) {
   const [isOpenModels, setOpenModels] = useState(false);
   const [isOpenTopics, setOpenTopics] = useState(false);
@@ -43,7 +48,6 @@ export default function SidebarFilters({
   };
 
   const activeModels = models.filter(m => m.active);
-  // Si showAllModels est false, on limite l'affichage aux 6 premiers
   const displayedActiveModels = showAllModels ? activeModels : activeModels.slice(0, 6);
 
   const filteredModelsPool = models
@@ -97,24 +101,23 @@ export default function SidebarFilters({
               </span>
             </button>
           </div>
-           </div>
+        </div>
 
-          {isOpenModels && (
-            <div className="search-box-container">
-              <input 
-                type="text"
-                className="search-input"
-                placeholder="Search Model..."
-                value={searchModel}
-                autoFocus
-                onChange={(e) => setSearchModel(e.target.value)}
-              />
-            </div>
-          )}
+        {isOpenModels && (
+          <div className="search-box-container">
+            <input 
+              type="text"
+              className="search-input"
+              placeholder="Search Model..."
+              value={searchModel}
+              autoFocus
+              onChange={(e) => setSearchModel(e.target.value)}
+            />
+          </div>
+        )}
 
         
         <div className="select-box" onClick={() => !isOpenModels && setOpenModels(true)}>
-          {/* Classe conditionnelle 'scrollable' appliquée quand étendu */}
           <div className={`selected-tags ${showAllModels ? 'expanded-scroll' : ''}`}>
             {displayedActiveModels.map(m => (
               <div key={m.name} className="tag" title={m.name}>
@@ -129,7 +132,6 @@ export default function SidebarFilters({
             ))}
           </div>
 
-          {/* Bouton Show More / Show Less (affiché uniquement si > 6 modèles sélectionnés) */}
           {activeModels.length > 6 && (
             <button 
               className="btn-show-more"
@@ -316,6 +318,21 @@ export default function SidebarFilters({
             <p className="empty-state">No settings found</p>
           )}
         </div>
+      </div>
+
+      <div className='diversity-section'>
+        <button 
+          className={`btn-diversity-modal ${isLoadingMatrix ? 'loading' : ''}`} 
+          onClick={onOpenDiversityModal}
+          disabled={isLoadingMatrix}
+        >
+          <span className='material-symbols-outlined open-modal loading'>
+             {isLoadingMatrix ? "cycle" : "explore"}
+          </span>
+          <div className='diversity-title'>
+           Diversity Explorer
+          </div>
+        </button>
       </div>
     </aside>
   )
