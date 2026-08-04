@@ -67,6 +67,15 @@ export interface SourceTextData {
     full_response: string;
 }
 
+export interface DiversityMatrixRow {
+    model: string;
+    setting: string;
+    topic: string;
+    hsd: number;
+    vs: number;
+    cd: number;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const fetchDashboardData = async () => {
@@ -162,6 +171,21 @@ export const fetchSourceTextData = async (pointId: number): Promise<SourceTextDa
         return await response.json();
     } catch (error) {
         console.error(`API error fetching the point source text ${pointId}:`, error);
+        throw error;
+    }
+};
+
+export const fetchDiversityMatrix = async (): Promise<DiversityMatrixRow[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/diversity-matrix`);
+
+        if (!response.ok){
+            throw new Error (`Error requesting the diversity matrix (Status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch(error){
+        console.error(`Api error fetching the diversity Matrix`, error);
         throw error;
     }
 };

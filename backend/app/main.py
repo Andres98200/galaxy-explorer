@@ -78,3 +78,10 @@ def get_diversity_overview(
         selected_topics=topics,
         selected_settings=settings
     )
+
+@app.get('/api/diversity-matrix')
+def get_diversity_matrix():
+    """
+    Endpoint for the diversity explorer modal
+    """
+    return repo.get_diversity_matrix()
