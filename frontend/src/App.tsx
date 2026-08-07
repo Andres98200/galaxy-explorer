@@ -119,6 +119,14 @@ export default function App() {
     setTopics(prev => prev.map(t => ({ ...t, active: selectedTopics.includes(t.name) })));
   };
 
+  // 🎯 Sélectionne uniquement le modèle de la ligne cliquée et ferme le modal
+  const handleSelectModelRow = (row: DiversityMatrixRow) => {
+    setModels(prev => prev.map(m => ({ ...m, active: m.name === row.model })));
+      if (row.setting) setSettings(prev => prev.map(s => ({ ...s, active: s.name === row.setting })));
+      if (row.topic) setTopics(prev => prev.map(t => ({ ...t, active: t.name === row.topic })));
+    setIsModalOpen(false);
+  };
+
   // Filtrage des points pour la 3D
   const filteredPoints = useMemo(() => {
     return points.filter(point => 
@@ -262,6 +270,7 @@ export default function App() {
         availableSettings={availableSettingNames}
         availableTopics={availableTopicNames}
         onSaveFilters={handleSaveFiltersFromModal}
+        onSelectModelRow={handleSelectModelRow}
       />
     </div>
   );
