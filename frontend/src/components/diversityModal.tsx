@@ -21,6 +21,7 @@ interface DiversityModalProps {
     selectedSettings: string[],
     selectedTopics: string[]
   ) => void;
+  onSelectModelRow?: (row: DiversityMatrixRow) => void; 
 }
 
 type SortField = 'model' | 'setting' | 'topic' | 'hsd' | 'vs' | 'cd';
@@ -33,7 +34,8 @@ export default function DiversityModal({
   availableModels,
   availableSettings,
   availableTopics,
-  onSaveFilters
+  onSaveFilters,
+  onSelectModelRow // 🛠️ FIX : Ajouté ici dans les props déstructurées
 }: DiversityModalProps) {
   const [showTopicColumn, setShowTopicColumn] = useState<boolean>(true);
 
@@ -47,18 +49,16 @@ export default function DiversityModal({
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [settingDropdownOpen, setSettingDropdownOpen] = useState(false);
 
-  // 🛠️ FIX : On synchronise les filtres UNIQUEMENT à l'ouverture de la modal
   useEffect(() => {
-    if (isOpen) {
-      setSelectedModels(availableModels);
-      setSelectedSettings(availableSettings);
-      setSelectedTopics(availableTopics);
-    }
-  }, [isOpen]); 
+  if (isOpen) {
+    setSelectedModels(availableModels);
+    setSelectedSettings(availableSettings);
+    setSelectedTopics(availableTopics);
+  }
+}, [isOpen, availableModels, availableSettings, availableTopics]);
 
   if (!isOpen) return null;
 
-  // 🛠️ FIX : Sécurité si matrixData est vide/non chargée
   const filteredData = useMemo(() => {
     if (!matrixData || matrixData.length === 0) return [];
     return matrixData.filter(
@@ -295,11 +295,20 @@ export default function DiversityModal({
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="modal-table-body">
               {sortedData.length > 0 ? (
                 sortedData.map((row, i) => (
                   <tr key={i}>
-                    <td className="col-model">{row.model}</td>
+                    <td
+                      className="col-model clickable-model"
+                      onClick={() => {
+                        if (onSelectModelRow) {
+                          onSelectModelRow(row);
+                        }
+                      }}
+                    >
+                      {row.model}
+                    </td>
                     <td className="col-setting">{row.setting}</td>
                     {showTopicColumn && <td className="col-topic">{row.topic}</td>}
                     <td className="col-number text-right">{row.hsd.toFixed(3)}</td>

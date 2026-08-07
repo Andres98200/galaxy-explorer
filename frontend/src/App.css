@@ -1538,9 +1538,17 @@ input:checked + .slider:before {
   background-color: #ffffff;
 }
 
+
 .col-model {
   font-weight: 700;
   color: #1e293b;
+  transition: color 0.3s ease;
+}
+
+.col-model:hover {
+  color: var(--select-color);
+  cursor: pointer;
+  
 }
 
 .col-setting {
