@@ -8,6 +8,12 @@ from sklearn.cluster import KMeans
 from llm_knowledge.epistemic_diversity import embed_sentences
 import pandas as pd
 import numpy as np
+import torch
+
+
+if not torch.cuda.is_available():
+    torch.cuda.current_device = lambda: 0
+    torch.cuda.device_count = lambda: 0
 
 DB_FILE = "galaxy_explorer.db"
 
