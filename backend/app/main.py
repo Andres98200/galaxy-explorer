@@ -1,3 +1,10 @@
+import torch
+
+if not torch.cuda.is_available():
+    torch.cuda.current_device = lambda: 0
+    torch.cuda.device_count = lambda: 0
+
+
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -23,7 +30,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
