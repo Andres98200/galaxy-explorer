@@ -9,7 +9,6 @@ interface SideBarFiltersProps {
   setTopics: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   settings: FilterItem[];
   setSettings: React.Dispatch<React.SetStateAction<FilterItem[]>>;
-  // 🆕 Prop pour déclencher l'ouverture de la matrice
   onOpenDiversityModal: () => void;
   isLoadingMatrix?: boolean;
 }
@@ -28,7 +27,6 @@ export default function SidebarFilters({
   const [isOpenTopics, setOpenTopics] = useState(false);
   const [isOpenSettings, setOpenSettings] = useState(false);
 
-  // Nouvel état pour étendre ou réduire les modèles sélectionnés
   const [showAllModels, setShowAllModels] = useState(false);
 
   const [searchModel, setSearchModel] = useState('');
@@ -61,7 +59,6 @@ export default function SidebarFilters({
         <p className='logo-text'>AXECOM AI</p>
       </div>
         
-      {/* SECTION MODÈLES */}
       <div className="filter-group">
         <div className='filters-header'>
           <h3>LLM model</h3>
@@ -168,7 +165,7 @@ export default function SidebarFilters({
         )}
       </div>
 
-      {/* SECTION TOPICS */}
+      {/* TOPICS */}
       <div className="filter-group">
         <div className='filters-header'>
           <h3>Topics</h3>
@@ -244,7 +241,7 @@ export default function SidebarFilters({
         </div>
       </div>
 
-      {/* SECTION SETTINGS */}
+      {/* SETTINGS */}
       <div className="filter-group">
         <div className="filters-header">
           <h3>Settings</h3>
@@ -319,6 +316,8 @@ export default function SidebarFilters({
           )}
         </div>
       </div>
+
+      {/* DIVERSITY EXPLORER */}
 
       <div className='diversity-section'>
         <button 

@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 class DataRepository:
     def __init__(self):
         self.db_path = "galaxy_explorer.db"
-        print("🌌 Connexion à la base SQLite (Démarrage instantané)...")
+        print("Connection to the SQLite database")
         
         start_load = time.time()
         
@@ -31,7 +31,7 @@ class DataRepository:
         
         conn.close()
         
-        print(f"🎉 TOTAL CACHE INITIALIZATION TIME: {time.time() - start_load:.4f} seconds.\n")
+        print(f"TOTAL CACHE INITIALIZATION TIME: {time.time() - start_load:.4f} seconds.\n")
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path)
@@ -142,7 +142,7 @@ class DataRepository:
                 "percentage": score_visuel
             })
 
-        print(f"🚀 [Details API] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
+        print(f"[API Details] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
         return {"phrases": phrases_list, "models": model_list, "neighbors": formatted_neighbors}
     
     def get_points_source_text(self, point_id: int) -> Dict[str, Any]:
@@ -180,7 +180,7 @@ class DataRepository:
         
         if match_row:
             match_data = dict(match_row)
-            print(f"🚀 [Source-Text API] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
+            print(f"🚀 [API Source-Text] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
             return {
                 "model": str(point['model']),
                 "topic": str(point['topic']),
@@ -188,12 +188,12 @@ class DataRepository:
                 "full_response": match_data["text"]           
             }
                 
-        print(f"❌ [Source-Text API] Text context not found.\n")
+        print(f"❌ [API Source-Text] Text context not found.\n")
         return {"error": "Text context not found"}
 
     def _calculate_diversity_from_clusters(self, cluster_list: List[int]) -> float:
         """
-        Calcul de l'entropie Hill-Shannon par topic : HSD = exp(Entropy)
+        Calculation of the Hill-Shannon entropy by topic: HSD = exp(Entropy)
         """
         valid_clusters = [c for c in cluster_list if c is not None and c >= 0]
         if not valid_clusters:
@@ -210,8 +210,8 @@ class DataRepository:
 
     def _calculate_vendi_score(self, coords_matrix: np.ndarray) -> float:
         """
-        Calcul du Vendi Score officiel (spectral) par topic :
-        VS = exp(- sum(lambda_i * log(lambda_i))) sur la matrice de noyau cosinus.
+        Calculation of the official Vendi Score (spectral) by topic :
+        VS = exp(- sum(lambda_i * log(lambda_i))) on the cosine kernel matrix.
         """
         if len(coords_matrix) < 2:
             return 1.0
@@ -267,21 +267,19 @@ class DataRepository:
 
         df = pd.DataFrame([dict(r) for r in rows])
 
-        # ---------------------------------------------------------------------
-        # 1. HSD & VS : Calculs PAR TOPIC puis MOYENNE (Moyenner sur tous les topics)
-        # ---------------------------------------------------------------------
+        # 1. HSD & VS: Calculations BY TOPIC then AVERAGE (average over all topics)
         topic_hsd_scores = []
         topic_vs_scores = []
 
         for topic_name, group in df.groupby("topic"):
-            # A. HSD par topic
+            # A. HSD per topic
             valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
             if valid_clusters:
                 hsd_val = self._calculate_diversity_from_clusters(valid_clusters)
                 if hsd_val > 0:
                     topic_hsd_scores.append(hsd_val)
 
-            # B. Vendi Score par topic
+            # B. Vendi Score per topic
             topic_coords = group[["x", "y", "z"]].to_numpy()
             if len(topic_coords) > 1:
                 vs_val = self._calculate_vendi_score(topic_coords)
@@ -290,31 +288,24 @@ class DataRepository:
         avg_hsd = float(np.mean(topic_hsd_scores)) if topic_hsd_scores else 0.0
         avg_vs = float(np.mean(topic_vs_scores)) if topic_vs_scores else 0.0
 
-        # ---------------------------------------------------------------------
-        # 2. Distance Cosinus (CD) GLOBALE sur TOUS les claims/points affichés
-        # ---------------------------------------------------------------------
+        # 2. Cosinus distance (CD) GLOBAL on ALL the claims/points displayed
         coords = df[["x", "y", "z"]].to_numpy()
         global_cd = 0.0
         
         if len(coords) > 1:
-            # Échantillonnage si > 1000 points pour préserver une réponse ultra-rapide (< 15ms)
             if len(coords) > 1000:
                 idx = np.random.choice(len(coords), 1000, replace=False)
                 sample_coords = coords[idx]
             else:
                 sample_coords = coords
 
-            # Normalisation pour la Cosine Distance : 1 - cos(theta)
             norms = np.linalg.norm(sample_coords, axis=1, keepdims=True)
             norms[norms == 0] = 1e-10
             normalized = sample_coords / norms
             
-            # Matrice de similarité cosinus
             cos_sim_matrix = np.dot(normalized, normalized.T)
-            # Distance Cosinus = 1 - similarité
             cos_dist_matrix = 1.0 - cos_sim_matrix
             
-            # Moyenne sur toutes les paires uniques de claims (triangle supérieur)
             triu_indices = np.triu_indices_from(cos_dist_matrix, k=1)
             global_cd = float(np.mean(cos_dist_matrix[triu_indices]))
 
@@ -328,12 +319,11 @@ class DataRepository:
 
     def get_diversity_matrix(self) -> List[Dict[str, Any]]:
         """
-        Calcule les métriques HSD, VS et CD pour chaque combinaison (model, setting, topic).
+        Calculates the HSD, VS and CD metrics for each combination (model, setting, topic).        
         """
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        # Récupération de tous les points nécessaires
         query = "SELECT model, setting, topic, cluster, x, y, z FROM galaxy_points"
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -345,19 +335,18 @@ class DataRepository:
         df = pd.DataFrame([dict(r) for r in rows])
         results = []
 
-        # Groupement par (Model, Setting, Topic)
         grouped = df.groupby(["model", "setting", "topic"])
 
         for (model, setting, topic), group in grouped:
-            # 1. HSD par topic
+            # 1. HSD per topic
             valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
             hsd_val = self._calculate_diversity_from_clusters(valid_clusters) if valid_clusters else 0.0
 
-            # 2. Vendi Score par topic
+            # 2. Vendi Score per topic
             coords = group[["x", "y", "z"]].to_numpy()
             vs_val = self._calculate_vendi_score(coords) if len(coords) > 1 else 1.0
 
-            # 3. Distance Cosinus (CD) par phrase/sentence
+            # 3. Cosinus distance (CD) per phrase/sentence
             cd_val = 0.0
             if len(coords) > 1:
                 norms = np.linalg.norm(coords, axis=1, keepdims=True)

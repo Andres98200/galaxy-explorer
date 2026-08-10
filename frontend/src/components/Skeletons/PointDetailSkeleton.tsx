@@ -8,7 +8,7 @@ export default function PointDetailsPanelSkeleton({ onClose }: PointDetailsPanel
 
   return (
     <div className="Points-panel fade-in-animation">
-      {/* Titre du panneau */}
+      {/* Title */}
       <div className="panel-title">
         <span className="skeleton-box skeleton-title-lg" />
         {onClose && (
@@ -18,7 +18,7 @@ export default function PointDetailsPanelSkeleton({ onClose }: PointDetailsPanel
         )}
       </div>
 
-      {/* Tableau Skeleton */}
+      {/* Table Skeleton */}
       <table className="panel-table">
         <thead>
           <tr className="table-titles">
@@ -44,7 +44,7 @@ export default function PointDetailsPanelSkeleton({ onClose }: PointDetailsPanel
         </tbody>
       </table>
 
-      {/* Section Distribution Skeleton */}
+      {/* Distribution */}
       <div className="attribution-section">
         <div className="attribution-title">
           <span className="skeleton-box skeleton-title-md" />
@@ -64,7 +64,7 @@ export default function PointDetailsPanelSkeleton({ onClose }: PointDetailsPanel
         </div>
       </div>
 
-      {/* Section Neighbors Skeleton */}
+      {/* Neighbors */}
     <div className="attribution-section">
         <div className="attribution-title">
           <span className="skeleton-box skeleton-title-md" />
