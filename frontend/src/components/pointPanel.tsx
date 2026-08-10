@@ -32,7 +32,6 @@ export default function PointDetailsPanel ({
     return (
         <div className="Points-panel fade-in-animation">
 
-            {/* Partie du tableau dans le container*/}
             <div className="panel-title">
                 <span>Top reletated Phrases</span>
                 <span onClick={onClose} className="panel-close-btn material-symbols-outlined">close_small</span>
@@ -53,8 +52,6 @@ export default function PointDetailsPanel ({
                     ))}
                 </tbody>
             </table>
-
-            {/*Partie Distribution */}
 
             <div className="attribution-section">
                 <div className="attribution-title">Model Distribution</div>
@@ -80,7 +77,6 @@ export default function PointDetailsPanel ({
                 </div>
             </div>
 
-            {/*Section Neighboor */}
         <div className="neighbor-section">
             <div className="neighbor-section-title">Nearest neighbors</div>
                 <div className="panel-neighbor-list">
