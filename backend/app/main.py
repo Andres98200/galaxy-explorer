@@ -8,25 +8,21 @@ if not torch.cuda.is_available():
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-
-# 1. On importe d'abord le script de génération
 from init_db import build_database
 
-# 2. On s'assure que la base existe (ou est générée/re-générée) AVANT d'importer le repo
-print("🚀 [Startup] Vérification de la base de données...")
+print("🚀 [Startup] Checking if the database already exists...")
 build_database()
-print("✅ [Startup] Base de données prête !")
+print("✅ [Startup] Database is ready !")
 
-# 3. Maintenant on peut importer et charger le repo en toute sécurité
 from app.repositories.data_repository import DataRepository
 
 app = FastAPI(
-    title="Galaxy Explorer API",
+    title="AXECOM API",
     description="API to load and filter the 3D galaxy of LLM knowledge clusters. Built with FastAPI and Hugging Face Datasets.",
-    version="1.0.0"
+    version="4.0.0"
 )
 
-# 🌐 CORS activation on the Back-End
+# CORS activation on the Back-End
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,15 +31,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print("🌌 Loading the galaxy with data...")
+print("Loading the galaxy with data...")
 repo = DataRepository()
-print("✅ Galaxy ready to be explored !")
-
-# --- Tes routes restent exactement les mêmes ---
+print("Galaxy ready to be explored ")
 
 @app.get("/")
 def read_root():
-    return {"status": "online", "message": " API Galaxy Explorer on and ready to be used 🚀"}
+    return {"status": "online", "message": " API Galaxy Explorer on and ready to be used "}
 
 @app.get("/api/meta")
 def get_metadata():
@@ -78,7 +72,7 @@ def get_diversity_overview(
     settings: Optional[List[str]] = Query(None)
 ):
     """
-    Endpoint pour la boîte 'Overview' (Ticket #57).
+    Endpoint for the diversity overview metrics.
     """
     return repo.get_diversity_overview(
         selected_models=models,

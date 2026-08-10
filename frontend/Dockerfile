@@ -1,9 +1,9 @@
-# --- Étape 1 : Build de l'application Vite / React ---
+# --- Build of the React frontend ---
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Récupération de la variable pour l'API au moment du build
+# Get the API base URL from build arguments and set it as an environment variable
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
@@ -13,13 +13,13 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# --- Étape 2 : Serveur Nginx pour servir les fichiers statiques de prod ---
+# Nginx server
 FROM nginx:alpine
 
-# Copie des fichiers compilés
+# copy the build output to replace the default nginx contents.
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuration de Nginx pour gérer le routage React
+# Configuration of the Nginx server to serve the React app and handle client-side routing
 RUN echo 'server { \
     listen 80; \
     location / { \

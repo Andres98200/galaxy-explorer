@@ -56,7 +56,6 @@ function GalaxyPointsCloud({
     const circleTexture = useMemo(() => createCircleTexture(), []);
     const [activate3DPoint, setActive3DPoint] = useState<GalaxyPoints | null>(null);
 
-    // ⏱️ Rotation automatique
     useFrame(() => {
         if (groupRef.current && !activate3DPoint && !selectedPoint) {
             groupRef.current.rotation.y += 0.002;
@@ -178,7 +177,7 @@ function GalaxyPointsCloud({
 
     return (
       <group ref={groupRef}>
-        {/* Nuage de points principal */}
+        {/* galaxy */}
         <points
           onPointerMove={handlePointerMove}
           onPointerOut={handlePointerOut}
@@ -365,7 +364,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
           camera={{ position: [10, 10, 40], fov: 70 }}
           raycaster={{
             params: {
-              Points: { threshold: 0.8 }, // Ajuste à 0.8-1.2 si tu souhaites une zone de clic encore plus large
+              Points: { threshold: 0.8 },
               Mesh: {},
               Line: { threshold: 1 },
               LOD: {},
@@ -393,7 +392,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
           />
         </Canvas>
 
-      {/* Panneau latéral droit 1 */}
+      {/* right pannel*/}
       {selectedPoint && (
         <div className='details-panel-container'>
           {isLoadingDetails ? (
@@ -412,7 +411,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         </div>
       )}
       
-      {/* Panneau latéral gauche 2 */}
+      {/* left pannel */}
       {selectedPoint && (
         <div className="details-panel-container-2"> 
           {isLoadingText ? (

@@ -31,7 +31,6 @@ export default function App() {
   const [points, SetPoints] = useState<GalaxyPoints[]>([]);
   const [settings, setSettings] = useState<FilterItem[]>([]);
 
-  // Métriques de diversité (HSD, VS, CD)
   const [diversity, setDiversity] = useState<DiversityOverview>({
     avg_hsd: 0,
     avg_vs: 0,
@@ -53,7 +52,6 @@ export default function App() {
 
   const closeMenu = () => setIsMenuOpen(false);
 
-  // Initialisation du tableau de bord
   useEffect(() => {
     fetchDashboardData()
       .then((data) => {
@@ -77,17 +75,14 @@ export default function App() {
       });
   }, []);
 
-  // Extraction des filtres actifs
   const activeModelNames = useMemo(() => models.filter(m => m.active).map(m => m.name), [models]);
   const activeTopicNames = useMemo(() => topics.filter(t => t.active).map(t => t.name), [topics]);
   const activeSettingNames = useMemo(() => settings.filter(s => s.active).map(s => s.name), [settings]);
 
-  // Listes complètes pour le modal
   const availableModelNames = useMemo(() => models.map(m => m.name), [models]);
   const availableSettingNames = useMemo(() => settings.map(s => s.name), [settings]);
   const availableTopicNames = useMemo(() => topics.map(t => t.name), [topics]);
 
-  // Mise à jour dynamique des cartes lors d'un changement de filtres
   useEffect(() => {
     if (loading) return;
 
@@ -119,7 +114,6 @@ export default function App() {
     setTopics(prev => prev.map(t => ({ ...t, active: selectedTopics.includes(t.name) })));
   };
 
-  // 🎯 Sélectionne uniquement le modèle de la ligne cliquée et ferme le modal
   const handleSelectModelRow = (row: DiversityMatrixRow) => {
     setModels(prev => prev.map(m => ({ ...m, active: m.name === row.model })));
       if (row.setting) setSettings(prev => prev.map(s => ({ ...s, active: s.name === row.setting })));
@@ -127,7 +121,6 @@ export default function App() {
     setIsModalOpen(false);
   };
 
-  // Filtrage des points pour la 3D
   const filteredPoints = useMemo(() => {
     return points.filter(point => 
       activeModelNames.includes(point.model) && 
@@ -136,7 +129,6 @@ export default function App() {
     );
   }, [points, activeModelNames, activeTopicNames, activeSettingNames]);
 
-  // Cartes mises à jour avec les métriques calculées
   const dynamicStats = useMemo(() => {
     return [
       { 

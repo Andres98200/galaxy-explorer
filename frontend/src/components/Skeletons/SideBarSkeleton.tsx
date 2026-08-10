@@ -10,7 +10,7 @@ export default function SideBarFilterSkeleton() {
         <p className="logo-text">AXECOM AI</p>
       </div>
 
-      {/* SECTION 1: LLM MODEL */}
+      {/* LLM MODEL */}
       <div className="filter-group">
         <div className="filters-header">
             <Skeleton className="filters-header-skeleton"/>
@@ -35,7 +35,7 @@ export default function SideBarFilterSkeleton() {
         </div>
       </div>
 
-      {/* SECTION 2: TOPICS */}
+      {/* TOPICS */}
       <div className="filter-group">
         <div className="filters-header">
           <Skeleton className="filters-header-skeleton" />
@@ -46,7 +46,7 @@ export default function SideBarFilterSkeleton() {
           </div>
         </div>
         
-        {/* Simuler une vraie liste de checkboxes (4-5 items) */}
+        {/* 4-5 items skeleton */}
         <div className="checkbox-list">
             {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} className="checkbox-list-skeleton" />
@@ -54,7 +54,7 @@ export default function SideBarFilterSkeleton() {
         </div>
       </div>
 
-      {/* SECTION 3: SETTINGS */}
+      {/* SETTINGS */}
         <div className="filter-group">
         <div className="filters-header">
           <Skeleton className="filters-header-skeleton" />
