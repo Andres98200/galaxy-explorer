@@ -1,17 +1,16 @@
-# Ignorer les environnements virtuels
-.venv/
+#Ignore the virtual environment directories
 venv/
 env/
 
-# Ignorer les fichiers de cache Python
+# Ignore the build directories
 __pycache__/
 *.pyc
 
-# Ignorer les fichiers de cache
+# Ignore cache files
 galaxy_cache.parquet
 responses_cache.parquet
 galaxy_explorer.db
 
-# Ignorer les fichiers .env
+# Ignore .env files
 .env
 .env.local

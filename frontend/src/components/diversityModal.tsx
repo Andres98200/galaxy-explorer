@@ -35,7 +35,7 @@ export default function DiversityModal({
   availableSettings,
   availableTopics,
   onSaveFilters,
-  onSelectModelRow // 🛠️ FIX : Ajouté ici dans les props déstructurées
+  onSelectModelRow 
 }: DiversityModalProps) {
   const [showTopicColumn, setShowTopicColumn] = useState<boolean>(true);
 

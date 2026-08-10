@@ -5,7 +5,6 @@ export interface DashboardStats {
     total_embedded_phrases: number;
 }
 
-// 🆕 Interface pour la réponse de l'overview de diversité
 export interface DiversityOverview {
     avg_hsd: number;
     avg_vs: number;
@@ -115,12 +114,11 @@ export const fetchDashboardData = async () => {
 
         return { models, topics, settings, points, stats };
     } catch(error) {
-        console.error("Erreur API:", error);
+        console.error("API error:", error);
         throw error;
     }
 };
 
-// 🆕 Fonction pour récupérer les métriques dynamiques (Ticket #57)
 export const fetchDiversityOverview = async (
     models?: string[],
     topics?: string[],
@@ -150,12 +148,12 @@ export const fetchPointDetails = async (pointId: number): Promise<PointDetailsRe
         const response = await fetch(`${API_BASE_URL}/api/points/${pointId}/details`);
 
         if (!response.ok) {
-            throw new Error(`Erreur lors de la récupération des détails (Status: ${response.status})`);
+            throw new Error(`API error fetching details for point ${pointId} (Status: ${response.status})`);
         }
 
         return await response.json();
     } catch (error) {
-        console.error(`Erreur API sur les détails du point ${pointId}:`, error);
+        console.error(`API error fetching details for point ${pointId}:`, error);
         throw error;
     }
 };
