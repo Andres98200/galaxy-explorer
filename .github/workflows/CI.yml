@@ -5,9 +5,6 @@ on:
     branches: [ main, master, develop ]
   pull_request:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
 
     commit-lint-check:
@@ -23,7 +20,7 @@ jobs:
           uses: gsactions/commit-message-checker@v2
           with:
             # Verify if the commit message follows the Conventional Commits standard
-            pattern: '^(feat|fix|ci|docs|style|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?: .+|^Merge pull request .+'
+            pattern: '^(feat|fix|ci|docs|style|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?: .+|^Merge .+|^Revert.+'
             error: '❌ Your commit message does not follow the Conventional Commits standard! Example of a valid message: "feat(example-x): add 3d canvas"'
             excludeDescription: 'true' # Verify only the title of the commit message, not the description
             excludeTitle: 'false' 
@@ -43,7 +40,7 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
-                python-version: 3.11
+                python-version: '3.11'
 
             - name: Install Dependencies
             # Install the backend dependencies to be able to do a syntax check and import test. We don't run the tests here, just a simple import check to catch basic syntax errors and missing dependencies.
