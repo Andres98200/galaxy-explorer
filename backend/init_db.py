@@ -32,7 +32,7 @@ def build_database():
     count_data = {}
     MAX_PHRASES_PER_TOPIC = 200
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 15000000
+    MAX_LINES_TO_SCAN = 25000000
 
     print("Beginning scan of dataset lines...")
     for line in dataset['clusters']:
