@@ -29,15 +29,12 @@ def build_database():
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
     phrases, topics, models, prompt_indices = [], [], [], []
-    count_data = {}
-    MAX_PHRASES_PER_TOPIC = 200
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 25000000
+    # MAX_LINES_TO_SCAN = 70000000
 
     print("Beginning scan of dataset lines...")
     for line in dataset['clusters']:
-        outfile_scanned = total_scanned + 1
-        total_scanned = outfile_scanned
+        total_scanned += 1
         
         if total_scanned % 50000 == 0:
             print(f"Lines scanned : {total_scanned:,} | Points retained : {len(phrases):,}")
@@ -48,18 +45,14 @@ def build_database():
         if not topic_line or not phrase_line:
             continue
         
-        if topic_line not in count_data:
-            count_data[topic_line] = 0
+        # On conserve TOUTES les phrases valides (sans aucune limite par topic)
+        phrases.append(phrase_line)
+        topics.append(topic_line)
+        models.append(line.get('model_id'))
+        prompt_indices.append(line.get('prompt_index'))
         
-        if count_data[topic_line] < MAX_PHRASES_PER_TOPIC:
-            phrases.append(phrase_line)
-            topics.append(topic_line)
-            models.append(line.get('model_id'))
-            prompt_indices.append(line.get('prompt_index'))
-            count_data[topic_line] += 1
-        
-        if total_scanned >= MAX_LINES_TO_SCAN:
-            break
+        # if total_scanned >= MAX_LINES_TO_SCAN:
+        #     break
 
     print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
     print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")
