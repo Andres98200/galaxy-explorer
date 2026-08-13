@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useEffect } from 'react'; 
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react'; 
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -6,9 +6,8 @@ import PointDetailsPanel from './pointPanel';
 import { type GalaxyPoints, type FilterItem, fetchPointDetails, fetchSourceTextData, type SourceTextData } from '../services/api';
 import SourceTextPanel from './SourceTextPanel';
 import { getColorFromString } from '../utils/colors';
-import SourceTextPanelSkeleton from './Skeletons/SourceTextPanelSkeleton'
+import SourceTextPanelSkeleton from './Skeletons/SourceTextPanelSkeleton';
 import PointDetailsPanelSkeleton from './Skeletons/PointDetailSkeleton';
-
 
 interface GalaxyCanvasProps {
   points: GalaxyPoints[];
@@ -40,12 +39,14 @@ function GalaxyPointsCloud({
     topics, 
     selectedPoint,
     neighborsId,
+    isRotating,
     onHover, 
     onHoverOut, 
     onPointClick 
 }: GalaxyCanvasProps & {
     selectedPoint: GalaxyPoints | null;
     neighborsId: number[];
+    isRotating: boolean;
     onHover: (point: GalaxyPoints, x: number, y: number) => void;
     onHoverOut: () => void;
     onPointClick: (point: GalaxyPoints) => void;
@@ -57,7 +58,7 @@ function GalaxyPointsCloud({
     const [activate3DPoint, setActive3DPoint] = useState<GalaxyPoints | null>(null);
 
     useFrame(() => {
-        if (groupRef.current && !activate3DPoint && !selectedPoint) {
+        if (groupRef.current && isRotating) {
             groupRef.current.rotation.y += 0.002;
         }
     });
@@ -177,7 +178,6 @@ function GalaxyPointsCloud({
 
     return (
       <group ref={groupRef}>
-        {/* galaxy */}
         <points
           onPointerMove={handlePointerMove}
           onPointerOut={handlePointerOut}
@@ -264,16 +264,39 @@ function GalaxyPointsCloud({
 export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     const [hoveredInfo, setHoveredInfo] = useState<HoveredInfo | null>(null);
     const [selectedPoint, setSelectedPoint] = useState<GalaxyPoints | null>(null);
+    
+    const [isRotating, setIsRotating] = useState<boolean>(true);
+
+    const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [neighborsId, setNeighborsId] = useState<number[]>([]);
-
     const [panelData, setPanelData] = useState<{ phrases: any[], models: any[], neighbors: any[] } | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
-
     const [sourceTextData, setSourceTextData] = useState<SourceTextData | null>(null);
     const [isLoadingText, setIsLoadingText] = useState<boolean>(false);
-    
+
+    const handleUserInteraction = useCallback(() => {
+        setIsRotating(false);
+
+        if (rotationTimeoutRef.current) {
+            clearTimeout(rotationTimeoutRef.current);
+        }
+
+        rotationTimeoutRef.current = setTimeout(() => {
+            setIsRotating(true);
+        }, 10000);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (rotationTimeoutRef.current) {
+                clearTimeout(rotationTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleHover = (point: GalaxyPoints, x: number, y: number) => {
+        handleUserInteraction();
         setHoveredInfo({ point, x, y});
         document.body.style.cursor = 'pointer';
     };
@@ -290,6 +313,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
     }, [selectedPoint, topics]);
 
     const handlePointClick = async (point: GalaxyPoints) => {
+        handleUserInteraction();
         setSelectedPoint(point);
         setIsLoadingDetails(true);
         setIsLoadingText(true);
@@ -361,6 +385,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         )}
 
         <Canvas 
+          onPointerDown={handleUserInteraction}
           camera={{ position: [10, 10, 40], fov: 70 }}
           raycaster={{
             params: {
@@ -379,6 +404,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
               topics={topics} 
               selectedPoint={selectedPoint}
               neighborsId={neighborsId}
+              isRotating={isRotating}
               onHover={handleHover} 
               onHoverOut={handleHoverOut}
               onPointClick={handlePointClick}
@@ -389,10 +415,12 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
             dampingFactor={0.05}
             maxDistance={60}
             minDistance={3}
+            onStart={handleUserInteraction}
+            onChange={handleUserInteraction}
           />
         </Canvas>
 
-      {/* right pannel*/}
+      {/* right panel */}
       {selectedPoint && (
         <div className='details-panel-container'>
           {isLoadingDetails ? (
@@ -411,7 +439,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
         </div>
       )}
       
-      {/* left pannel */}
+      {/* left panel */}
       {selectedPoint && (
         <div className="details-panel-container-2"> 
           {isLoadingText ? (
