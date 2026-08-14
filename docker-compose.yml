@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/galaxy_explorer.db:/app/galaxy_explorer.db
+      - ./backend/data:/app/data
     restart: always
 
   frontend:

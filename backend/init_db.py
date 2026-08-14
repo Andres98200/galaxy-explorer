@@ -1,15 +1,15 @@
 import os
 import time
 import sqlite3
-from datasets import load_dataset
-from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans
-from llm_knowledge.epistemic_diversity import embed_sentences
-import pandas as pd
 import numpy as np
+import pandas as pd
 import torch
+from datasets import load_dataset
+from sklearn.cluster import MiniBatchKMeans
+from openTSNE import TSNE
+from llm_knowledge.epistemic_diversity import embed_sentences
 
-
+# Ensure CUDA device handling doesn't break if GPU isn't directly available
 if not torch.cuda.is_available():
     torch.cuda.current_device = lambda: 0
     torch.cuda.device_count = lambda: 0
@@ -18,26 +18,26 @@ DB_FILE = "galaxy_explorer.db"
 
 def build_database():
     if os.path.exists(DB_FILE):
-        print(f"Database {DB_FILE} already exists. No need to rebuild it.")
+        print(f"Database {DB_FILE} already exists. Skipping initialization.")
         return
 
-    print("Database not found. Launching automated generation...")
-    global_start = time.time()
     conn = sqlite3.connect(DB_FILE)
 
-    print("Connection to Hugging Face (Streaming mode)...")
+    print("Connecting to Hugging Face dataset (Streaming mode)...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
     phrases, topics, models, prompt_indices = [], [], [], []
     total_scanned = 0
-    # MAX_LINES_TO_SCAN = 70000000
+    
+    # Set the total dataset scan limit (e.g., 70M lines or full dataset)
+    # No per-topic restriction is applied here.
+    MAX_GLOBAL_LINES = 70_000_000 
 
-    print("Beginning scan of dataset lines...")
+    print("Extracting ALL factoids without any per-topic limitations...")
     for line in dataset['clusters']:
         total_scanned += 1
-        
-        if total_scanned % 50000 == 0:
-            print(f"Lines scanned : {total_scanned:,} | Points retained : {len(phrases):,}")
+        if total_scanned % 500_000 == 0:
+            print(f"Lines scanned: {total_scanned:,} | Extracted phrases: {len(phrases):,}")
 
         topic_line = line.get('topic')
         phrase_line = line.get('factoid') 
@@ -45,123 +45,119 @@ def build_database():
         if not topic_line or not phrase_line:
             continue
         
-        # On conserve TOUTES les phrases valides (sans aucune limite par topic)
+        # Collect every valid entry without capping by topic
         phrases.append(phrase_line)
         topics.append(topic_line)
         models.append(line.get('model_id'))
         prompt_indices.append(line.get('prompt_index'))
         
-        # if total_scanned >= MAX_LINES_TO_SCAN:
-        #     break
+        if total_scanned >= MAX_GLOBAL_LINES:
+            break
 
-    print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
-    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")
+    n_points = len(phrases)
+    print(f"Data extraction complete: {n_points:,} total phrases collected.")
 
-    print("Downloading full_responses (Memory)...")
-    responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses')
-    
-    print("Preparing and filtering initial responses...")
-    responses_df = responses_ds.to_pandas()
-    
-    responses_df['topic_clean'] = responses_df['topic'].astype(str).str.strip().str.lower()
-    responses_df['prompt_index_clean'] = responses_df['prompt_index'].astype(int)
-    responses_df['model_clean'] = responses_df['model_id'].astype(str).str.strip().str.lower()
-
-    print("Extracting complex associations (topic, prompt_index, model) -> setting...")
-    setting_mapping = responses_df[['topic_clean', 'prompt_index_clean', 'model_clean', 'setting']].drop_duplicates()
-    
-    setting_map_dict = {
-        (row['topic_clean'], row['prompt_index_clean'], row['model_clean']): row['setting']
-        for _, row in setting_mapping.iterrows()
-    }
-
-    # 1. Embeddings
-    print("Step 1/3 : Calculate embeddings...")
+    # ------------------------------------------------------------------------
+    # STEP 1: Calculate Sentence Embeddings
+    # ------------------------------------------------------------------------
+    print("Step 1/3: Computing high-dimensional sentence embeddings...")
     start_embed = time.time()
     embeddings = embed_sentences(phrases)
-    print(f"  -> Embeddings calculated with success in {time.time() - start_embed:.2f} seconds.")
+    print(f" -> Embeddings calculated in {time.time() - start_embed:.2f}s")
 
-    # 2. Calculate t-SNE 3D
-    print("Step 2/3 : Calculating t-SNE 3D (Positioning the points)...")
+    # ------------------------------------------------------------------------
+    # STEP 2: 3D Dimension Reduction via openTSNE (Landmark-based Projection)
+    # Prevents Out-Of-Memory (OOM) crashes on large datasets (up to 70M points)
+    # ------------------------------------------------------------------------
+    print("Step 2/3: Generating 3D t-SNE coordinates using landmark projection...")
     start_tsne = time.time()
-    perplexity = min(30, len(embeddings) - 1)
-    tsne_3d = TSNE(n_components=3, perplexity=perplexity, random_state=42)
-    embeddings_3d = tsne_3d.fit_transform(embeddings)
-    print(f"  -> 3D coordinates generated in {time.time() - start_tsne:.2f} seconds.")
+    
+    # Initialize openTSNE with Fast Fourier Transform (FFT) acceleration
+    tsne = TSNE(
+        n_components=3,
+        perplexity=30,
+        metric="cosine",
+        n_jobs=-1,  # Utilize all available CPU cores
+        random_state=42
+    )
+    
+    # Use landmark projection if dataset exceeds 300,000 points to keep RAM usage low
+    if n_points > 300_000:
+        # Select 200,000 landmark points to represent the overall semantic space
+        n_landmarks = min(200_000, n_points)
+        print(f" -> Fitting base 3D t-SNE grid on {n_landmarks:,} landmark points...")
+        
+        indices_landmarks = np.random.choice(n_points, size=n_landmarks, replace=False)
+        embedding_landmarks = tsne.fit(embeddings[indices_landmarks])
+        
+        # Pre-allocate output array for 3D coordinates
+        embeddings_3d = np.zeros((n_points, 3), dtype=np.float32)
+        embeddings_3d[indices_landmarks] = embedding_landmarks
+        
+        # Project remaining millions of points into the fitted 3D space in chunks
+        print(" -> Projecting remaining data points into the 3D space in batches...")
+        mask_remaining = np.ones(n_points, dtype=bool)
+        mask_remaining[indices_landmarks] = False
+        remaining_indices = np.where(mask_remaining)[0]
+        
+        batch_size = 50_000
+        for i in range(0, len(remaining_indices), batch_size):
+            batch_idx = remaining_indices[i:i + batch_size]
+            embeddings_3d[batch_idx] = embedding_landmarks.transform(embeddings[batch_idx])
+            
+            if i > 0 and i % 1_000_000 == 0:
+                print(f"    Projected {i:,} / {len(remaining_indices):,} points...")
+    else:
+        # Direct fit for smaller datasets
+        embeddings_3d = tsne.fit(embeddings)
 
+    print(f" -> 3D coordinates generated in {time.time() - start_tsne:.2f}s")
+
+    # ------------------------------------------------------------------------
+    # STEP 3: DataFrame Construction & SQLite Indexing
+    # ------------------------------------------------------------------------
     galaxy_df = pd.DataFrame({
-        'phrase': phrases, 'topic': topics, 'model': models,
+        'phrase': phrases,
+        'topic': topics,
+        'model': models,
         'prompt_index': prompt_indices,
-        'x': embeddings_3d[:, 0], 'y': embeddings_3d[:, 1], 'z': embeddings_3d[:, 2]
+        'x': embeddings_3d[:, 0],
+        'y': embeddings_3d[:, 1],
+        'z': embeddings_3d[:, 2]
     })
+    
+    # Free up memory immediately
+    del embeddings 
+    del embeddings_3d
 
-    print("Step 3/3 : Generating coherent local clusters by topic...")
-    computed_clusters = []
+    print("Step 3/3: Performing local clustering using MiniBatchKMeans...")
+    computed_clusters = np.zeros(len(galaxy_df), dtype=int)
+    
+    # Compute local clusters per topic to maintain local grouping structure
     for topic_name, group in galaxy_df.groupby('topic'):
-        group_embeddings = embeddings[group.index]
         n_samples = len(group)
-        n_clusters = max(3, min(10, n_samples // 15))
+        # Dynamically scale number of clusters based on topic size
+        n_clusters = max(3, min(20, n_samples // 50))
         
         if n_samples >= n_clusters:
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-            cluster_labels = kmeans.fit_predict(group_embeddings)
-        else:
-            cluster_labels = np.zeros(n_samples, dtype=int)
-            
-        for idx, label in zip(group.index, cluster_labels):
-            computed_clusters.append((idx, label))
-            
-    computed_clusters.sort(key=lambda x: x[0])
-    galaxy_df['cluster'] = [c[1] for c in computed_clusters]
+            mbk = MiniBatchKMeans(n_clusters=n_clusters, random_state=42, batch_size=1024)
+            computed_clusters[group.index] = mbk.fit_predict(galaxy_df.loc[group.index, ['x', 'y', 'z']].values)
 
-    galaxy_df['id'] = range(len(galaxy_df))
+    galaxy_df['cluster'] = computed_clusters
+    galaxy_df['id'] = np.arange(len(galaxy_df))
 
-    print("Linking the 'setting' column to the galaxy points...")
-    galaxy_df['setting'] = galaxy_df.apply(
-        lambda r: setting_map_dict.get(
-            (
-                str(r['topic']).strip().lower(), 
-                int(r['prompt_index']),
-                str(r['model']).strip().lower()
-            ), 
-            "unknown"
-        ),
-        axis=1
-    )
+    print("Writing records to SQLite database...")
+    galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False, chunksize=50_000)
 
-    print("Saving 3D points in SQLite...")
-    galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False)
-
-    print("🧹 Final filtering of responses to keep only the texts of the points...")
-    galaxy_df['match_key'] = galaxy_df['topic'].astype(str).str.strip().str.lower() + "_" + galaxy_df['prompt_index'].astype(str) + "_" + galaxy_df['model'].astype(str).str.strip().str.lower()
-    responses_df['match_key'] = responses_df['topic_clean'] + "_" + responses_df['prompt_index_clean'].astype(str) + "_" + responses_df['model_clean']
-
-    final_responses_df = responses_df[responses_df['match_key'].isin(galaxy_df['match_key'])].copy()
-    
-    galaxy_df = galaxy_df.drop(columns=['match_key'])
-    final_responses_df = final_responses_df.drop(columns=['topic_clean', 'prompt_index_clean', 'model_clean', 'match_key'])
-    del responses_df
-
-    print(f"Saving {len(final_responses_df):,} useful responses in SQLite...")
-    final_responses_df['topic'] = final_responses_df['topic'].astype(str).str.strip().str.lower()
-    final_responses_df['model_id'] = final_responses_df['model_id'].astype(str).str.strip().str.lower()
-    final_responses_df['prompt_index'] = final_responses_df['prompt_index'].astype(int)
-    
-    final_responses_df.to_sql("responses", conn, if_exists="replace", index=False)
-    del final_responses_df
-    del galaxy_df
-
-    print("Creating performance indexes for SQLite...")
+    # Create indexes to ensure fast HTTP response times in Uvicorn / FastAPI
+    print("Creating performance indexes...")
     cursor = conn.cursor()
-    cursor.execute("CREATE INDEX idx_galaxy_id ON galaxy_points(id);")
-    cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
-    cursor.execute("CREATE INDEX idx_galaxy_model ON galaxy_points(model);")
-    cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);")
-    cursor.execute("CREATE INDEX idx_lookup_responses ON responses(topic, model_id, prompt_index);")
-    
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_galaxy_id ON galaxy_points(id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_galaxy_topic ON galaxy_points(topic);")
     conn.commit()
     conn.close()
-    print(f"Database created in {time.time() - global_start:.2f} seconds!")
+    
+    print("Database build successfully completed!")
 
 if __name__ == "__main__":
     build_database()
