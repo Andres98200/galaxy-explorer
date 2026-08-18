@@ -14,14 +14,27 @@ if not torch.cuda.is_available():
     torch.cuda.current_device = lambda: 0
     torch.cuda.device_count = lambda: 0
 
-DB_FILE = "galaxy_explorer.db"
+DB_FILE = os.path.join("data", "galaxy_explorer.db")
 
 def build_database():
+    # Vérification robuste : on s'assure que le fichier ET la table existent
     if os.path.exists(DB_FILE):
-        print(f"Database {DB_FILE} already exists. No need to rebuild it.")
-        return
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM galaxy_points")
+            count = cursor.fetchone()[0]
+            conn.close()
+            if count > 0:
+                print(f"✅ Database {DB_FILE} already exists and contains {count} points. No need to rebuild it.")
+                return
+        except Exception as e:
+            print(f"⚠️ Existing database is invalid or empty ({e}). Rebuilding...")
+            if os.path.exists(DB_FILE):
+                os.remove(DB_FILE)
 
-    print("Database not found. Launching automated generation...")
+    print("🚀 Database not found or incomplete. Launching automated generation...")
+    # ... suite du code de build_database()
     global_start = time.time()
     conn = sqlite3.connect(DB_FILE)
 
@@ -30,7 +43,7 @@ def build_database():
     
     phrases, topics, models, prompt_indices = [], [], [], []
     total_scanned = 0
-    # MAX_LINES_TO_SCAN = 70000000
+    MAX_LINES_TO_SCAN = 10000
 
     print("Beginning scan of dataset lines...")
     for line in dataset['clusters']:
@@ -51,8 +64,8 @@ def build_database():
         models.append(line.get('model_id'))
         prompt_indices.append(line.get('prompt_index'))
         
-        # if total_scanned >= MAX_LINES_TO_SCAN:
-        #     break
+        if total_scanned >= MAX_LINES_TO_SCAN:
+             break
 
     print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
     print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")

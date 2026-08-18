@@ -5,11 +5,12 @@ import numpy as np
 from collections import Counter
 from scipy.stats import entropy
 from typing import List, Dict, Any, Optional
+import os
 
 
 class DataRepository:
     def __init__(self):
-        self.db_path = "galaxy_explorer.db"
+        self.db_path = os.path.join("data", "galaxy_explorer.db")
         print("Connection to the SQLite database")
         
         start_load = time.time()
@@ -44,7 +45,7 @@ class DataRepository:
             "topics": sorted(self.cached_topics),
             "settings": sorted(self.cached_settings),
             "stats": {
-                "total_dataset_scanned": 70000000,
+                "total_dataset_scanned": 10000,
                 "total_embedded_phrases": self.total_cached_points
             }    
         }
