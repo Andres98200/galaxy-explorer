@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import time
 import pandas as pd
@@ -5,36 +6,34 @@ import numpy as np
 from collections import Counter
 from scipy.stats import entropy
 from typing import List, Dict, Any, Optional
-import os
 
+DB_FILE = os.path.join("data", "galaxy_explorer.db")
 
 class DataRepository:
-    def __init__(self):
-        self.db_path = os.path.join("data", "galaxy_explorer.db")
+    def __init__(self, db_path: str = DB_FILE):
+        self.db_path = db_path
         print("Connection to the SQLite database")
         
         start_load = time.time()
-        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT DISTINCT model FROM galaxy_points WHERE model IS NOT NULL")
+        cursor.execute("SELECT DISTINCT model FROM galaxy_points WHERE model IS NOT NULL AND model != ''")
         self.cached_models = [r[0] for r in cursor.fetchall()]
         
-        cursor.execute("SELECT DISTINCT topic FROM galaxy_points WHERE topic IS NOT NULL")
+        cursor.execute("SELECT DISTINCT topic FROM galaxy_points WHERE topic IS NOT NULL AND topic != ''")
         self.cached_topics = [r[0] for r in cursor.fetchall()]
 
-        cursor.execute("SELECT DISTINCT setting FROM galaxy_points WHERE setting IS NOT NULL")
+        cursor.execute("SELECT DISTINCT setting FROM galaxy_points WHERE setting IS NOT NULL AND setting != ''")
         self.cached_settings = [r[0] for r in cursor.fetchall()]
         
         cursor.execute("SELECT COUNT(*) FROM galaxy_points")
         self.total_cached_points = cursor.fetchone()[0]
         
         conn.close()
-        
         print(f"TOTAL CACHE INITIALIZATION TIME: {time.time() - start_load:.4f} seconds.\n")
 
-    def _get_connection(self):
+    def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
@@ -45,11 +44,11 @@ class DataRepository:
             "topics": sorted(self.cached_topics),
             "settings": sorted(self.cached_settings),
             "stats": {
-                "total_dataset_scanned": 10000,
+                "total_dataset_scanned": self.total_cached_points,
                 "total_embedded_phrases": self.total_cached_points
             }    
         }
-        
+
     def get_filtered_points(
         self, 
         selected_models: Optional[List[str]] = None, 
@@ -80,7 +79,7 @@ class DataRepository:
         for p in points:
             p['cluster'] = int(p['cluster']) if p['cluster'] is not None else -1
         return points
-    
+
     def get_point_details(self, point_id: int) -> Dict[str, Any]:
         global_start = time.time()
         conn = self._get_connection()
@@ -145,7 +144,7 @@ class DataRepository:
 
         print(f"[API Details] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
         return {"phrases": phrases_list, "models": model_list, "neighbors": formatted_neighbors}
-    
+
     def get_points_source_text(self, point_id: int) -> Dict[str, Any]:
         global_start = time.time()
         conn = self._get_connection()
@@ -160,21 +159,18 @@ class DataRepository:
             
         point = dict(point_row)
         
-        target_topic = str(point['topic']).strip().lower()
-        target_prompt_index = int(point['prompt_index'])
-        model_short = str(point['model']).split('/')[-1].strip().lower()
-        
         cursor.execute(
             """
             SELECT user_prompt, text 
             FROM responses 
-            WHERE LOWER(TRIM(topic)) = ? 
-              AND prompt_index = ?
-              AND (LOWER(model_id) LIKE ? OR LOWER(model_id) = ?)
-            ORDER BY LENGTH(user_prompt) DESC
+            WHERE topic = ? AND prompt_index = ? AND model_id = ?
             LIMIT 1
             """,
-            (target_topic, target_prompt_index, f"%{model_short}%", model_short)
+            (
+                str(point['topic']).strip().lower(),
+                int(point['prompt_index']),
+                str(point['model']).strip().lower()
+            )
         )
         match_row = cursor.fetchone()
         conn.close()
@@ -193,9 +189,6 @@ class DataRepository:
         return {"error": "Text context not found"}
 
     def _calculate_diversity_from_clusters(self, cluster_list: List[int]) -> float:
-        """
-        Calculation of the Hill-Shannon entropy by topic: HSD = exp(Entropy)
-        """
         valid_clusters = [c for c in cluster_list if c is not None and c >= 0]
         if not valid_clusters:
             return 0.0
@@ -210,10 +203,6 @@ class DataRepository:
         return float(hillshannon)
 
     def _calculate_vendi_score(self, coords_matrix: np.ndarray) -> float:
-        """
-        Calculation of the official Vendi Score (spectral) by topic :
-        VS = exp(- sum(lambda_i * log(lambda_i))) on the cosine kernel matrix.
-        """
         if len(coords_matrix) < 2:
             return 1.0
         
@@ -268,19 +257,16 @@ class DataRepository:
 
         df = pd.DataFrame([dict(r) for r in rows])
 
-        # 1. HSD & VS: Calculations BY TOPIC then AVERAGE (average over all topics)
         topic_hsd_scores = []
         topic_vs_scores = []
 
         for topic_name, group in df.groupby("topic"):
-            # A. HSD per topic
             valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
             if valid_clusters:
                 hsd_val = self._calculate_diversity_from_clusters(valid_clusters)
                 if hsd_val > 0:
                     topic_hsd_scores.append(hsd_val)
 
-            # B. Vendi Score per topic
             topic_coords = group[["x", "y", "z"]].to_numpy()
             if len(topic_coords) > 1:
                 vs_val = self._calculate_vendi_score(topic_coords)
@@ -289,7 +275,6 @@ class DataRepository:
         avg_hsd = float(np.mean(topic_hsd_scores)) if topic_hsd_scores else 0.0
         avg_vs = float(np.mean(topic_vs_scores)) if topic_vs_scores else 0.0
 
-        # 2. Cosinus distance (CD) GLOBAL on ALL the claims/points displayed
         coords = df[["x", "y", "z"]].to_numpy()
         global_cd = 0.0
         
@@ -319,9 +304,6 @@ class DataRepository:
         }
 
     def get_diversity_matrix(self) -> List[Dict[str, Any]]:
-        """
-        Calculates the HSD, VS and CD metrics for each combination (model, setting, topic).        
-        """
         conn = self._get_connection()
         cursor = conn.cursor()
         
@@ -339,15 +321,12 @@ class DataRepository:
         grouped = df.groupby(["model", "setting", "topic"])
 
         for (model, setting, topic), group in grouped:
-            # 1. HSD per topic
             valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
             hsd_val = self._calculate_diversity_from_clusters(valid_clusters) if valid_clusters else 0.0
 
-            # 2. Vendi Score per topic
             coords = group[["x", "y", "z"]].to_numpy()
             vs_val = self._calculate_vendi_score(coords) if len(coords) > 1 else 1.0
 
-            # 3. Cosinus distance (CD) per phrase/sentence
             cd_val = 0.0
             if len(coords) > 1:
                 norms = np.linalg.norm(coords, axis=1, keepdims=True)

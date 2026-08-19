@@ -22,17 +22,31 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Configuration of the Nginx server to serve the React app and handle client-side routing
 RUN echo 'server { \
     listen 80; \
+    \
+    # Compression Gzip globale \
+    gzip on; \
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml; \
+    gzip_min_length 1000; \
+    \
     location / { \
         root /usr/share/nginx/html; \
         index index.html index.htm; \
         try_files $uri $uri/ /index.html; \
     } \
+    \
     location /api/ { \
         proxy_pass http://AXECOM_AI_backend:8000; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
+        \
+        # Optimisation des tampons (evite l-ecriture disque dans proxy_temp) \
+        proxy_buffering on; \
+        proxy_buffer_size 128k; \
+        proxy_buffers 4 256k; \
+        proxy_busy_buffers_size 256k; \
+        proxy_max_temp_file_size 0; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
