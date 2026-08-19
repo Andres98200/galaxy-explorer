@@ -1,35 +1,51 @@
 import os
 import time
 import sqlite3
-import numpy as np
 import pandas as pd
+import numpy as np
 import torch
 from datasets import load_dataset
 from sklearn.cluster import MiniBatchKMeans
 from openTSNE import TSNE
 from llm_knowledge.epistemic_diversity import embed_sentences
 
-# Ensure CUDA device handling doesn't break if GPU isn't directly available
 if not torch.cuda.is_available():
     torch.cuda.current_device = lambda: 0
     torch.cuda.device_count = lambda: 0
 
-DB_FILE = "galaxy_explorer.db"
-EMBEDDINGS_CACHE = "embeddings_cache.mmap"
+# Correction du chemin pour matcher data_repository.py
+DB_FILE = os.path.join("data", "galaxy_explorer.db")
 
 def build_database():
+    os.makedirs("data", exist_ok=True)
+    
     if os.path.exists(DB_FILE):
-        print(f"Database {DB_FILE} already exists. Skipping initialization.")
-        return
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM galaxy_points")
+            count = cursor.fetchone()[0]
+            conn.close()
+            if count > 0:
+                print(f"✅ Database {DB_FILE} already exists and contains {count} points.")
+                return
+        except Exception as e:
+            print(f"⚠️ Existing database invalid ({e}). Rebuilding...")
+            os.remove(DB_FILE)
 
     conn = sqlite3.connect(DB_FILE)
 
-    print("Connecting to Hugging Face dataset (Streaming mode)...")
+    # -------------------------------------------------------------
+    # 1. Scanning streaming des clusters
+    # -------------------------------------------------------------
+    print("Connection to Hugging Face (Streaming mode)...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
     phrases, topics, models, prompt_indices = [], [], [], []
+    count_data = {}
+    MAX_PHRASES_PER_TOPIC = 2000
     total_scanned = 0
-    MAX_GLOBAL_LINES = 70_000_000 
+    MAX_LINES_TO_SCAN = 2500000
 
     print("Extracting ALL factoids without any per-topic limitations...")
     for line in dataset['clusters']:
@@ -38,137 +54,162 @@ def build_database():
             print(f"Lines scanned: {total_scanned:,} | Extracted phrases: {len(phrases):,}", flush=True)
 
         topic_line = line.get('topic')
-        phrase_line = line.get('factoid') 
+        phrase_line = line.get('factoid')
 
         if not topic_line or not phrase_line:
             continue
         
-        phrases.append(phrase_line)
-        topics.append(topic_line)
-        models.append(line.get('model_id'))
-        prompt_indices.append(line.get('prompt_index'))
+        topic_clean = str(topic_line).strip().lower()
         
-        if total_scanned >= MAX_GLOBAL_LINES:
+        if topic_clean not in count_data:
+            count_data[topic_clean] = 0
+        
+        if count_data[topic_clean] < MAX_PHRASES_PER_TOPIC:
+            phrases.append(phrase_line)
+            topics.append(topic_clean)
+            models.append(str(line.get('model_id')).strip().lower())
+            prompt_indices.append(int(line.get('prompt_index', 0)))
+            count_data[topic_clean] += 1
+        
+        if total_scanned >= MAX_LINES_TO_SCAN:
             break
 
-    n_points = len(phrases)
-    print(f"Data extraction complete: {n_points:,} total phrases collected.", flush=True)
+    print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
+    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")
 
-    # ------------------------------------------------------------------------
-    # STEP 1: Batch-wise Embedding Computation (Memory-Mapped)
-    # ------------------------------------------------------------------------
-    print("Step 1/3: Computing high-dimensional sentence embeddings (Batch mode)...", flush=True)
+    # -------------------------------------------------------------
+    # 2. Embeddings GPU & t-SNE 3D
+    # -------------------------------------------------------------
+    print("Step 1/3 : Calculate embeddings...")
     start_embed = time.time()
-    
-    # 1. Déterminer la dimension des embeddings sur une phrase test
-    sample_emb = embed_sentences([phrases[0]])
-    emb_dim = sample_emb.shape[1]
-    
-    # 2. Créer un fichier memmap sur disque pour éviter de faire exploser la RAM
-    embeddings = np.memmap(EMBEDDINGS_CACHE, dtype='float32', mode='w+', shape=(n_points, emb_dim))
-    
-    # 3. Calculer par paquets de 50 000 phrases
-    EMBED_BATCH_SIZE = 50_000
-    for i in range(0, n_points, EMBED_BATCH_SIZE):
-        batch_phrases = phrases[i:i + EMBED_BATCH_SIZE]
-        batch_embs = embed_sentences(batch_phrases)
-        embeddings[i:i + len(batch_phrases)] = batch_embs
-        embeddings.flush()  # Écrit sur disque et libère la RAM
-        
-        if i > 0 and i % 500_000 == 0:
-            print(f" -> Processed embeddings: {i:,} / {n_points:,}...", flush=True)
+    embeddings = embed_sentences(phrases)
+    print(f"  -> Embeddings calculated successfully in {time.time() - start_embed:.2f} seconds.")
 
-    print(f" -> Embeddings calculated in {time.time() - start_embed:.2f}s", flush=True)
-
-    # ------------------------------------------------------------------------
-    # STEP 2: 3D Dimension Reduction via openTSNE (Landmark-based Projection)
-    # ------------------------------------------------------------------------
-    print("Step 2/3: Generating 3D t-SNE coordinates using landmark projection...", flush=True)
+    print("Step 2/3 : Calculating t-SNE 3D (Positioning the points)...")
     start_tsne = time.time()
+    perplexity = min(30, max(5, len(embeddings) // 100))
     
-    tsne = TSNE(
+    tsne_3d = TSNE(
         n_components=3,
-        perplexity=30,
-        metric="cosine",
-        n_jobs=-1,
-        random_state=42
+        perplexity=perplexity,
+        n_jobs=-1, 
+        random_state=42,
+        init="pca",
+        learning_rate="auto"
     )
-    
-    if n_points > 300_000:
-        n_landmarks = min(200_000, n_points)
-        print(f" -> Fitting base 3D t-SNE grid on {n_landmarks:,} landmark points...", flush=True)
-        
-        indices_landmarks = np.random.choice(n_points, size=n_landmarks, replace=False)
-        
-        # Charger uniquement le sous-ensemble de landmarks en RAM
-        landmark_data = np.array(embeddings[indices_landmarks])
-        embedding_landmarks = tsne.fit(landmark_data)
-        del landmark_data  # Nettoyage RAM
-        
-        embeddings_3d = np.zeros((n_points, 3), dtype=np.float32)
-        embeddings_3d[indices_landmarks] = embedding_landmarks
-        
-        mask_remaining = np.ones(n_points, dtype=bool)
-        mask_remaining[indices_landmarks] = False
-        remaining_indices = np.where(mask_remaining)[0]
-        
-        batch_size = 50_000
-        for i in range(0, len(remaining_indices), batch_size):
-            batch_idx = remaining_indices[i:i + batch_size]
-            # Extraction par lot depuis le memmap
-            batch_data = np.array(embeddings[batch_idx])
-            embeddings_3d[batch_idx] = embedding_landmarks.transform(batch_data)
-            
-            if i > 0 and i % 1_000_000 == 0:
-                print(f"    Projected {i:,} / {len(remaining_indices):,} points...", flush=True)
-    else:
-        embeddings_3d = tsne.fit(np.array(embeddings))
+    embeddings_3d = tsne_3d.fit_transform(embeddings)
+    print(f"  -> 3D coordinates generated in {time.time() - start_tsne:.2f} seconds.")
 
-    print(f" -> 3D coordinates generated in {time.time() - start_tsne:.2f}s", flush=True)
-
-    # ------------------------------------------------------------------------
-    # STEP 3: DataFrame Construction & SQLite Indexing
-    # ------------------------------------------------------------------------
+    # -------------------------------------------------------------
+    # 3. Clustering KMeans local par Topic
+    # -------------------------------------------------------------
+    print("Step 3/3 : Generating coherent local clusters by topic...")
     galaxy_df = pd.DataFrame({
+        'id': range(len(phrases)),
         'phrase': phrases,
         'topic': topics,
         'model': models,
         'prompt_index': prompt_indices,
         'x': embeddings_3d[:, 0],
         'y': embeddings_3d[:, 1],
-        'z': embeddings_3d[:, 2]
+        'z': embeddings_3d[:, 2],
+        'setting': 'unknown'
     })
-    
-    del embeddings_3d
-    # Supprimer le fichier temporaire d'embeddings sur disque
-    if os.path.exists(EMBEDDINGS_CACHE):
-        os.remove(EMBEDDINGS_CACHE)
 
-    print("Step 3/3: Performing local clustering using MiniBatchKMeans...", flush=True)
     computed_clusters = np.zeros(len(galaxy_df), dtype=int)
-    
     for topic_name, group in galaxy_df.groupby('topic'):
         n_samples = len(group)
         n_clusters = max(3, min(20, n_samples // 50))
         
         if n_samples >= n_clusters:
-            mbk = MiniBatchKMeans(n_clusters=n_clusters, random_state=42, batch_size=1024)
-            computed_clusters[group.index] = mbk.fit_predict(galaxy_df.loc[group.index, ['x', 'y', 'z']].values)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=5)
+            labels = kmeans.fit_predict(embeddings[group.index])
+            computed_clusters[group.index] = labels
 
     galaxy_df['cluster'] = computed_clusters
-    galaxy_df['id'] = np.arange(len(galaxy_df))
 
-    print("Writing records to SQLite database...", flush=True)
-    galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False, chunksize=50_000)
+    print("Saving 3D points in SQLite...")
+    galaxy_df.to_sql("galaxy_points", conn, if_exists="replace", index=False)
+    
+    del embeddings, embeddings_3d, phrases, galaxy_df
 
-    print("Creating performance indexes...", flush=True)
     cursor = conn.cursor()
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_galaxy_id ON galaxy_points(id);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_galaxy_topic ON galaxy_points(topic);")
+    cursor.execute("CREATE INDEX idx_galaxy_lookup ON galaxy_points(topic, prompt_index, model);")
+    cursor.execute("CREATE INDEX idx_galaxy_id ON galaxy_points(id);")
+    conn.commit()
+
+    # -------------------------------------------------------------
+    # 4. Streaming & Insertion par lots de full_responses (évite l'OOM)
+    # -------------------------------------------------------------
+    print("Streaming full_responses and inserting directly into SQLite...")
+    responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses', streaming=True)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS responses (
+            topic TEXT,
+            prompt_index INTEGER,
+            model_id TEXT,
+            setting TEXT,
+            user_prompt TEXT,
+            text TEXT
+        )
+    """)
+    
+    batch = []
+    BATCH_SIZE = 10000
+    
+    for row in responses_ds:
+        batch.append((
+            str(row['topic']).strip().lower(),
+            int(row['prompt_index']),
+            str(row['model_id']).strip().lower(),
+            str(row.get('setting', 'unknown')),
+            row.get('user_prompt', ''),
+            row.get('text', '')
+        ))
+        
+        if len(batch) >= BATCH_SIZE:
+            cursor.executemany("INSERT INTO responses VALUES (?, ?, ?, ?, ?, ?)", batch)
+            conn.commit()
+            batch.clear()
+
+    if batch:
+        cursor.executemany("INSERT INTO responses VALUES (?, ?, ?, ?, ?, ?)", batch)
+        conn.commit()
+
+    print("Creating lookup indexes on responses...")
+    cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id);")
+    conn.commit()
+
+    # -------------------------------------------------------------
+    # 5. Injection directe du 'setting' via SQLite
+    # -------------------------------------------------------------
+    print("Updating 'setting' column in galaxy_points using SQLite...")
+    cursor.execute("""
+        UPDATE galaxy_points
+        SET setting = (
+            SELECT responses.setting 
+            FROM responses 
+            WHERE responses.topic = galaxy_points.topic 
+              AND responses.prompt_index = galaxy_points.prompt_index 
+              AND responses.model_id = galaxy_points.model
+            LIMIT 1
+        )
+        WHERE EXISTS (
+            SELECT 1 FROM responses 
+            WHERE responses.topic = galaxy_points.topic 
+              AND responses.prompt_index = galaxy_points.prompt_index 
+              AND responses.model_id = galaxy_points.model
+        )
+    """)
+    
+    cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);")
+    cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
+    cursor.execute("CREATE INDEX idx_galaxy_model ON galaxy_points(model);")
+    
     conn.commit()
     conn.close()
-    
-    print("Database build successfully completed!", flush=True)
+    print(f"🎉 Database successfully created in {time.time() - global_start:.2f} seconds!")
 
 if __name__ == "__main__":
     build_database()
