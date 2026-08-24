@@ -284,7 +284,7 @@ export default function GalaxyCanvas({ points, topics }: GalaxyCanvasProps) {
 
         rotationTimeoutRef.current = setTimeout(() => {
             setIsRotating(true);
-        }, 10000);
+        }, 100000);
     }, []);
 
     useEffect(() => {

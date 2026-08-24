@@ -23,8 +23,8 @@ class DataRepository:
         cursor.execute("SELECT DISTINCT topic FROM galaxy_points WHERE topic IS NOT NULL")
         self.cached_topics = [r[0] for r in cursor.fetchall()]
 
-        cursor.execute("SELECT DISTINCT setting FROM galaxy_points WHERE setting IS NOT NULL")
-        self.cached_settings = [r[0] for r in cursor.fetchall()]
+        cursor.execute("SELECT DISTINCT LOWER(TRIM(setting)) FROM galaxy_points WHERE setting IS NOT NULL AND setting != ''")
+        self.cached_settings = [r[0] for r in cursor.fetchall() if r[0]]
         
         cursor.execute("SELECT COUNT(*) FROM galaxy_points")
         self.total_cached_points = cursor.fetchone()[0]

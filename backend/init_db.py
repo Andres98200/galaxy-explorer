@@ -5,18 +5,18 @@ import pandas as pd
 import numpy as np
 import torch
 from datasets import load_dataset
-from sklearn.cluster import MiniBatchKMeans
-from openTSNE import TSNE
+from sklearn.cluster import MiniBatchKMeans, KMeans
+from sklearn.manifold import TSNE
 from llm_knowledge.epistemic_diversity import embed_sentences
 
 if not torch.cuda.is_available():
     torch.cuda.current_device = lambda: 0
     torch.cuda.device_count = lambda: 0
 
-# Correction du chemin pour matcher data_repository.py
 DB_FILE = os.path.join("data", "galaxy_explorer.db")
 
 def build_database():
+    global_start = time.time()
     os.makedirs("data", exist_ok=True)
     
     if os.path.exists(DB_FILE):
@@ -36,18 +36,18 @@ def build_database():
     conn = sqlite3.connect(DB_FILE)
 
     # -------------------------------------------------------------
-    # 1. Scanning streaming des clusters
+    # 1. Scanning streaming des clusters (Inclus extraction du 'setting')
     # -------------------------------------------------------------
     print("Connection to Hugging Face (Streaming mode)...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
-    phrases, topics, models, prompt_indices = [], [], [], []
+    phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 2000
+    MAX_PHRASES_PER_TOPIC = 100
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 2500000
+    MAX_LINES_TO_SCAN = 100000
 
-    print("Extracting ALL factoids without any per-topic limitations...")
+    print("Extracting ALL factoids with settings...")
     for line in dataset['clusters']:
         total_scanned += 1
         if total_scanned % 500_000 == 0:
@@ -69,6 +69,11 @@ def build_database():
             topics.append(topic_clean)
             models.append(str(line.get('model_id')).strip().lower())
             prompt_indices.append(int(line.get('prompt_index', 0)))
+            
+            # --- MODIFICATION CLÉ : Capture du setting directement du dataset ---
+            raw_setting = line.get('setting') or line.get('settings') or 'unknown'
+            settings.append(str(raw_setting).strip().lower())
+            
             count_data[topic_clean] += 1
         
         if total_scanned >= MAX_LINES_TO_SCAN:
@@ -113,7 +118,7 @@ def build_database():
         'x': embeddings_3d[:, 0],
         'y': embeddings_3d[:, 1],
         'z': embeddings_3d[:, 2],
-        'setting': 'unknown'
+        'setting': settings  # Utilise les vrais settings extraits
     })
 
     computed_clusters = np.zeros(len(galaxy_df), dtype=int)
@@ -139,7 +144,7 @@ def build_database():
     conn.commit()
 
     # -------------------------------------------------------------
-    # 4. Streaming & Insertion par lots de full_responses (évite l'OOM)
+    # 4. Streaming & Insertion des responses
     # -------------------------------------------------------------
     print("Streaming full_responses and inserting directly into SQLite...")
     responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses', streaming=True)
@@ -159,11 +164,12 @@ def build_database():
     BATCH_SIZE = 10000
     
     for row in responses_ds:
+        raw_setting = row.get('setting') or row.get('settings') or 'unknown'
         batch.append((
             str(row['topic']).strip().lower(),
             int(row['prompt_index']),
             str(row['model_id']).strip().lower(),
-            str(row.get('setting', 'unknown')),
+            str(raw_setting).strip().lower(),
             row.get('user_prompt', ''),
             row.get('text', '')
         ))
@@ -179,12 +185,13 @@ def build_database():
 
     print("Creating lookup indexes on responses...")
     cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id);")
+    cursor.execute("CREATE INDEX idx_responses_setting ON responses(setting);")
     conn.commit()
 
     # -------------------------------------------------------------
-    # 5. Injection directe du 'setting' via SQLite
+    # 5. Backup / Update si des points ont gardé 'unknown'
     # -------------------------------------------------------------
-    print("Updating 'setting' column in galaxy_points using SQLite...")
+    print("Updating any remaining 'unknown' settings in galaxy_points...")
     cursor.execute("""
         UPDATE galaxy_points
         SET setting = (
@@ -192,15 +199,10 @@ def build_database():
             FROM responses 
             WHERE responses.topic = galaxy_points.topic 
               AND responses.prompt_index = galaxy_points.prompt_index 
-              AND responses.model_id = galaxy_points.model
+              AND (responses.model_id = galaxy_points.model OR responses.model_id LIKE '%' || galaxy_points.model || '%')
             LIMIT 1
         )
-        WHERE EXISTS (
-            SELECT 1 FROM responses 
-            WHERE responses.topic = galaxy_points.topic 
-              AND responses.prompt_index = galaxy_points.prompt_index 
-              AND responses.model_id = galaxy_points.model
-        )
+        WHERE setting IS NULL OR setting = 'unknown' OR setting = ''
     """)
     
     cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);")
