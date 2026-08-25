@@ -13,7 +13,6 @@ if not torch.cuda.is_available():
     torch.cuda.current_device = lambda: 0
     torch.cuda.device_count = lambda: 0
 
-# Correction du chemin pour matcher data_repository.py
 DB_FILE = os.path.join("data", "galaxy_explorer.db")
 
 def build_database():
@@ -43,11 +42,11 @@ def build_database():
     print("Connection to Hugging Face (Streaming mode)...")
     dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
     
-    phrases, topics, models, prompt_indices = [], [], [], []
+    phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 2000
+    MAX_PHRASES_PER_TOPIC = 20
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 2500000
+    MAX_LINES_TO_SCAN = 10000
 
     print("Beginning scan of dataset lines...")
     for line in dataset['clusters']:
@@ -70,8 +69,9 @@ def build_database():
         if count_data[topic_clean] < MAX_PHRASES_PER_TOPIC:
             phrases.append(phrase_line)
             topics.append(topic_clean)
-            models.append(str(line.get('model_id')).strip().lower())
+            models.append(str(line.get('model_id', line.get('model', 'unknown'))).strip().lower())
             prompt_indices.append(int(line.get('prompt_index', 0)))
+            settings.append(str(line.get('setting', 'default')).strip().lower())
             count_data[topic_clean] += 1
         
         if total_scanned >= MAX_LINES_TO_SCAN:
@@ -113,10 +113,10 @@ def build_database():
         'topic': topics,
         'model': models,
         'prompt_index': prompt_indices,
+        'setting': settings,
         'x': embeddings_3d[:, 0],
         'y': embeddings_3d[:, 1],
-        'z': embeddings_3d[:, 2],
-        'setting': 'unknown'
+        'z': embeddings_3d[:, 2]
     })
 
     computed_clusters = np.zeros(len(galaxy_df), dtype=int)
@@ -139,10 +139,13 @@ def build_database():
     cursor = conn.cursor()
     cursor.execute("CREATE INDEX idx_galaxy_lookup ON galaxy_points(topic, prompt_index, model);")
     cursor.execute("CREATE INDEX idx_galaxy_id ON galaxy_points(id);")
+    cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);")
+    cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
+    cursor.execute("CREATE INDEX idx_galaxy_model ON galaxy_points(model);")
     conn.commit()
 
     # -------------------------------------------------------------
-    # 4. Streaming & Insertion par lots de full_responses (évite l'OOM)
+    # 4. Streaming & Insertion par lots de full_responses
     # -------------------------------------------------------------
     print("Streaming full_responses and inserting directly into SQLite...")
     responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses', streaming=True)
@@ -162,13 +165,14 @@ def build_database():
     BATCH_SIZE = 10000
     
     for row in responses_ds:
+        prompt_text = row.get('user_prompt') or row.get('prompt') or row.get('instruction') or ''
         batch.append((
-            str(row['topic']).strip().lower(),
-            int(row['prompt_index']),
-            str(row['model_id']).strip().lower(),
-            str(row.get('setting', 'unknown')),
-            row.get('user_prompt', ''),
-            row.get('text', '')
+            str(row.get('topic', '')).strip().lower(),
+            int(row.get('prompt_index', 0)),
+            str(row.get('model_id', row.get('model', ''))).strip().lower(),
+            str(row.get('setting', 'default')).strip().lower(),
+            str(prompt_text),
+            str(row.get('text', ''))
         ))
         
         if len(batch) >= BATCH_SIZE:
@@ -182,34 +186,6 @@ def build_database():
 
     print("Creating lookup indexes on responses...")
     cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id);")
-    conn.commit()
-
-    # -------------------------------------------------------------
-    # 5. Injection directe du 'setting' via SQLite
-    # -------------------------------------------------------------
-    print("Updating 'setting' column in galaxy_points using SQLite...")
-    cursor.execute("""
-        UPDATE galaxy_points
-        SET setting = (
-            SELECT responses.setting 
-            FROM responses 
-            WHERE responses.topic = galaxy_points.topic 
-              AND responses.prompt_index = galaxy_points.prompt_index 
-              AND responses.model_id = galaxy_points.model
-            LIMIT 1
-        )
-        WHERE EXISTS (
-            SELECT 1 FROM responses 
-            WHERE responses.topic = galaxy_points.topic 
-              AND responses.prompt_index = galaxy_points.prompt_index 
-              AND responses.model_id = galaxy_points.model
-        )
-    """)
-    
-    cursor.execute("CREATE INDEX idx_galaxy_setting ON galaxy_points(setting);")
-    cursor.execute("CREATE INDEX idx_galaxy_topic ON galaxy_points(topic);")
-    cursor.execute("CREATE INDEX idx_galaxy_model ON galaxy_points(model);")
-    
     conn.commit()
     conn.close()
     print(f"🎉 Database successfully created in {time.time() - global_start:.2f} seconds!")

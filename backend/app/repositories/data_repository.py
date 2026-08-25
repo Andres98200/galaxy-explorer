@@ -173,6 +173,19 @@ class DataRepository:
             )
         )
         match_row = cursor.fetchone()
+        
+        if not match_row:
+            cursor.execute(
+                """
+                SELECT user_prompt, text 
+                FROM responses 
+                WHERE topic = ? AND prompt_index = ?
+                LIMIT 1
+                """,
+                (str(point['topic']).strip().lower(), int(point['prompt_index']))
+            )
+            match_row = cursor.fetchone()
+
         conn.close()
         
         if match_row:
