@@ -44,9 +44,9 @@ def build_database():
     
     phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 20
+    MAX_PHRASES_PER_TOPIC = 50
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 10000
+    MAX_LINES_TO_SCAN = 100000
 
     print("Beginning scan of dataset lines...")
     for line in dataset['clusters']:
@@ -184,8 +184,8 @@ def build_database():
         cursor.executemany("INSERT INTO responses VALUES (?, ?, ?, ?, ?, ?)", batch)
         conn.commit()
 
-    print("Creating lookup indexes on responses...")
-    cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id);")
+    print(" lookup indexes on responses...")
+    cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id, setting);")
     conn.commit()
     conn.close()
     print(f"🎉 Database successfully created in {time.time() - global_start:.2f} seconds!")

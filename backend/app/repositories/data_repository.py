@@ -150,7 +150,8 @@ class DataRepository:
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT topic, model, prompt_index FROM galaxy_points WHERE id = ?", (point_id,))
+        # 1. Récupérer le point et TOUTES ses caractéristiques (y compris setting)
+        cursor.execute("SELECT topic, model, prompt_index, setting FROM galaxy_points WHERE id = ?", (point_id,))
         point_row = cursor.fetchone()
         
         if not point_row:
@@ -159,30 +160,37 @@ class DataRepository:
             
         point = dict(point_row)
         
+        # 2. Chercher la réponse exacte en incluant le setting (ift vs rag)
         cursor.execute(
             """
             SELECT user_prompt, text 
             FROM responses 
-            WHERE topic = ? AND prompt_index = ? AND model_id = ?
+            WHERE topic = ? AND prompt_index = ? AND model_id = ? AND setting = ?
             LIMIT 1
             """,
             (
                 str(point['topic']).strip().lower(),
                 int(point['prompt_index']),
-                str(point['model']).strip().lower()
+                str(point['model']).strip().lower(),
+                str(point['setting']).strip().lower()
             )
         )
         match_row = cursor.fetchone()
         
+        # Fallback si le setting exact n'est pas trouvé
         if not match_row:
             cursor.execute(
                 """
                 SELECT user_prompt, text 
                 FROM responses 
-                WHERE topic = ? AND prompt_index = ?
+                WHERE topic = ? AND prompt_index = ? AND model_id = ?
                 LIMIT 1
                 """,
-                (str(point['topic']).strip().lower(), int(point['prompt_index']))
+                (
+                    str(point['topic']).strip().lower(),
+                    int(point['prompt_index']),
+                    str(point['model']).strip().lower()
+                )
             )
             match_row = cursor.fetchone()
 
@@ -194,6 +202,7 @@ class DataRepository:
             return {
                 "model": str(point['model']),
                 "topic": str(point['topic']),
+                "setting": str(point['setting']),
                 "original_prompt": match_data["user_prompt"], 
                 "full_response": match_data["text"]           
             }
