@@ -150,7 +150,7 @@ class DataRepository:
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT topic, model, prompt_index FROM galaxy_points WHERE id = ?", (point_id,))
+        cursor.execute("SELECT topic, model, prompt_index, setting FROM galaxy_points WHERE id = ?", (point_id,))
         point_row = cursor.fetchone()
         
         if not point_row:
@@ -163,13 +163,14 @@ class DataRepository:
             """
             SELECT user_prompt, text 
             FROM responses 
-            WHERE topic = ? AND prompt_index = ? AND model_id = ?
+            WHERE topic = ? AND prompt_index = ? AND model_id = ? AND setting = ?
             LIMIT 1
             """,
             (
                 str(point['topic']).strip().lower(),
                 int(point['prompt_index']),
-                str(point['model']).strip().lower()
+                str(point['model']).strip().lower(),
+                str(point['setting']).strip().lower()
             )
         )
         match_row = cursor.fetchone()
@@ -179,10 +180,14 @@ class DataRepository:
                 """
                 SELECT user_prompt, text 
                 FROM responses 
-                WHERE topic = ? AND prompt_index = ?
+                WHERE topic = ? AND prompt_index = ? AND model_id = ?
                 LIMIT 1
                 """,
-                (str(point['topic']).strip().lower(), int(point['prompt_index']))
+                (
+                    str(point['topic']).strip().lower(),
+                    int(point['prompt_index']),
+                    str(point['model']).strip().lower()
+                )
             )
             match_row = cursor.fetchone()
 
@@ -190,15 +195,16 @@ class DataRepository:
         
         if match_row:
             match_data = dict(match_row)
-            print(f"🚀 [API Source-Text] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
+            print(f"[API Source-Text] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
             return {
                 "model": str(point['model']),
                 "topic": str(point['topic']),
+                "setting": str(point['setting']),
                 "original_prompt": match_data["user_prompt"], 
                 "full_response": match_data["text"]           
             }
                 
-        print(f"❌ [API Source-Text] Text context not found.\n")
+        print(f"[API Source-Text] Text context not found.\n")
         return {"error": "Text context not found"}
 
     def _calculate_diversity_from_clusters(self, cluster_list: List[int]) -> float:
