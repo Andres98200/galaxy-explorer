@@ -32,12 +32,14 @@ def build_database():
             print(f"Existing database invalid ({e}). Rebuilding...")
             os.remove(DB_FILE)
 
-# -------------------------------------------------------------
-    # 1. Scanning streaming des clusters (avec Shuffle)
+    print("Database not found. Launching automated generation...")
+    global_start = time.time()
+    conn = sqlite3.connect(DB_FILE)
+
+    # -------------------------------------------------------------
+    # 1. Scanning clusters
     # -------------------------------------------------------------
     print("Connection to Hugging Face (Streaming mode)...")
-    
-    # Charger directement le split 'clusters' et lui appliquer le shuffle
     dataset_clusters = load_dataset(
         'dwright37/llm-knowledge-collapse', 
         'clusters', 
@@ -47,14 +49,11 @@ def build_database():
     
     phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    
-    MAX_PHRASES_PER_TOPIC = 50   # Max de points par sujet
-    MAX_LINES_TO_SCAN = 1000000  # Limite de précaution
-
+    MAX_PHRASES_PER_TOPIC = 50
     total_scanned = 0
+    MAX_LINES_TO_SCAN = 10000
 
     print("Beginning scan of dataset lines...")
-    # Parcourir directement l'objet dataset_clusters (pas dataset['clusters'])
     for line in dataset_clusters:
         total_scanned += 1
         
@@ -84,7 +83,7 @@ def build_database():
             break
 
     print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
-    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,} (across {len(count_data)} topics)")
+    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")
 
     # -------------------------------------------------------------
     # 2. Embeddings GPU & t-SNE 3D
