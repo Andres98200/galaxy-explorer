@@ -26,30 +26,36 @@ def build_database():
             count = cursor.fetchone()[0]
             conn.close()
             if count > 0:
-                print(f"✅ Database {DB_FILE} already exists and contains {count} points.")
+                print(f"Database {DB_FILE} already exists and contains {count} points.")
                 return
         except Exception as e:
-            print(f"⚠️ Existing database invalid ({e}). Rebuilding...")
+            print(f"Existing database invalid ({e}). Rebuilding...")
             os.remove(DB_FILE)
 
-    print("Database not found. Launching automated generation...")
-    global_start = time.time()
-    conn = sqlite3.connect(DB_FILE)
-
-    # -------------------------------------------------------------
-    # 1. Scanning streaming des clusters
+# -------------------------------------------------------------
+    # 1. Scanning streaming des clusters (avec Shuffle)
     # -------------------------------------------------------------
     print("Connection to Hugging Face (Streaming mode)...")
-    dataset = load_dataset('dwright37/llm-knowledge-collapse', 'clusters', streaming=True)
+    
+    # Charger directement le split 'clusters' et lui appliquer le shuffle
+    dataset_clusters = load_dataset(
+        'dwright37/llm-knowledge-collapse', 
+        'clusters', 
+        split='clusters', 
+        streaming=True
+    ).shuffle(buffer_size=10000, seed=42)
     
     phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 50
+    
+    MAX_PHRASES_PER_TOPIC = 50   # Max de points par sujet
+    MAX_LINES_TO_SCAN = 1000000  # Limite de précaution
+
     total_scanned = 0
-    MAX_LINES_TO_SCAN = 100000
 
     print("Beginning scan of dataset lines...")
-    for line in dataset['clusters']:
+    # Parcourir directement l'objet dataset_clusters (pas dataset['clusters'])
+    for line in dataset_clusters:
         total_scanned += 1
         
         if total_scanned % 50000 == 0:
@@ -78,7 +84,7 @@ def build_database():
             break
 
     print(f"Scan terminated! {total_scanned:,} lines scanned in total.")
-    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,}")
+    print(f"Final number of points retained for the 3D galaxy : {len(phrases):,} (across {len(count_data)} topics)")
 
     # -------------------------------------------------------------
     # 2. Embeddings GPU & t-SNE 3D
@@ -104,7 +110,7 @@ def build_database():
     print(f"  -> 3D coordinates generated in {time.time() - start_tsne:.2f} seconds.")
 
     # -------------------------------------------------------------
-    # 3. Clustering KMeans local par Topic
+    # 3. Clustering KMeans local per Topic
     # -------------------------------------------------------------
     print("Step 3/3 : Generating coherent local clusters by topic...")
     galaxy_df = pd.DataFrame({
@@ -145,7 +151,7 @@ def build_database():
     conn.commit()
 
     # -------------------------------------------------------------
-    # 4. Streaming & Insertion par lots de full_responses
+    # 4. Streaming & Insertion of full_responses
     # -------------------------------------------------------------
     print("Streaming full_responses and inserting directly into SQLite...")
     responses_ds = load_dataset('dwright37/llm-knowledge-collapse', 'full_responses', split='full_responses', streaming=True)
@@ -188,7 +194,7 @@ def build_database():
     cursor.execute("CREATE INDEX idx_responses_lookup ON responses(topic, prompt_index, model_id, setting);")
     conn.commit()
     conn.close()
-    print(f"🎉 Database successfully created in {time.time() - global_start:.2f} seconds!")
+    print(f"Database successfully created in {time.time() - global_start:.2f} seconds!")
 
 if __name__ == "__main__":
     build_database()

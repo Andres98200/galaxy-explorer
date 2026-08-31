@@ -150,7 +150,6 @@ class DataRepository:
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        # 1. Récupérer le point et TOUTES ses caractéristiques (y compris setting)
         cursor.execute("SELECT topic, model, prompt_index, setting FROM galaxy_points WHERE id = ?", (point_id,))
         point_row = cursor.fetchone()
         
@@ -160,7 +159,6 @@ class DataRepository:
             
         point = dict(point_row)
         
-        # 2. Chercher la réponse exacte en incluant le setting (ift vs rag)
         cursor.execute(
             """
             SELECT user_prompt, text 
@@ -177,7 +175,6 @@ class DataRepository:
         )
         match_row = cursor.fetchone()
         
-        # Fallback si le setting exact n'est pas trouvé
         if not match_row:
             cursor.execute(
                 """
@@ -198,7 +195,7 @@ class DataRepository:
         
         if match_row:
             match_data = dict(match_row)
-            print(f"🚀 [API Source-Text] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
+            print(f"[API Source-Text] TOTAL EXECUTION TIME: {time.time() - global_start:.4f} seconds.\n")
             return {
                 "model": str(point['model']),
                 "topic": str(point['topic']),
@@ -207,7 +204,7 @@ class DataRepository:
                 "full_response": match_data["text"]           
             }
                 
-        print(f"❌ [API Source-Text] Text context not found.\n")
+        print(f"[API Source-Text] Text context not found.\n")
         return {"error": "Text context not found"}
 
     def _calculate_diversity_from_clusters(self, cluster_list: List[int]) -> float:
