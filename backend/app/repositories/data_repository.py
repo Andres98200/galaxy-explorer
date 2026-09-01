@@ -249,7 +249,6 @@ class DataRepository:
         if len(coords) < 2:
             return 0.0
 
-        # Normalisation directe des coordonnées 3D d'origine
         norms = np.linalg.norm(coords, axis=1, keepdims=True)
         norms[norms == 0] = 1e-10
         normalized = coords / norms
@@ -263,6 +262,55 @@ class DataRepository:
             return 0.0
 
         return float(np.mean(cos_dist_matrix[triu_indices]))
+
+    def get_diversity_matrix(self) -> List[Dict[str, Any]]:
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        
+        query = "SELECT model, setting, topic, cluster, x, y, z FROM galaxy_points"
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            return []
+
+        df = pd.DataFrame([dict(r) for r in rows])
+        results = []
+
+        grouped = df.groupby(["model", "setting", "topic"])
+
+        for (model, setting, topic), group in grouped:
+            valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
+            hsd_val = self._calculate_diversity_from_clusters(valid_clusters) if valid_clusters else 0.0
+
+            coords = group[["x", "y", "z"]].to_numpy()
+            vs_val = self._calculate_vendi_score(coords) if len(coords) > 1 else 1.0
+
+            cd_val = 0.0
+            if len(coords) > 1:
+                norms = np.linalg.norm(coords, axis=1, keepdims=True)
+                norms[norms == 0] = 1e-10
+                normalized = coords / norms
+                
+                cos_sim_matrix = np.dot(normalized, normalized.T)
+                cos_dist_matrix = 1.0 - cos_sim_matrix
+                
+                triu_indices = np.triu_indices_from(cos_dist_matrix, k=1)
+                if len(triu_indices[0]) > 0:
+                    cd_val = float(np.mean(cos_dist_matrix[triu_indices]))
+
+            results.append({
+                "model": model,
+                "setting": setting,
+                "topic": topic,
+                "hsd": round(hsd_val, 3),
+                "vs": round(vs_val, 3),
+                "cd": round(cd_val, 3)
+            })
+
+        return results
+
 
     def get_diversity_overview(
         self, 
@@ -305,7 +353,6 @@ class DataRepository:
         topic_vs_scores = []
         topic_cd_scores = []
 
-        # ON CALCULE TOUT PAR TOPIC (PER-TOPIC)
         for topic_name, group in df.groupby("topic"):
             # 1. HSD
             valid_clusters = group[group["cluster"] >= 0]["cluster"].tolist()
@@ -314,7 +361,7 @@ class DataRepository:
                 if hsd_val > 0:
                     topic_hsd_scores.append(hsd_val)
 
-            # 2. Vendi & Cosine Distance centrée sur le topic
+            # 2. Vendi & Cosine Distance
             coords = group[["x", "y", "z"]].to_numpy()
             if len(coords) > 1:
                 vs_val = self._calculate_vendi_score(coords)
