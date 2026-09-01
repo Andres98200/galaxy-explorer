@@ -137,7 +137,7 @@ Follow these steps to deploy or run a copy of the project locally or on your Ope
 <!-- USAGE EXAMPLES -->
 ## Data Persistence & Regeneration
 
-The SQLite database file is persisted on the host machine using a Docker bind mount at `./backend/galaxy_explorer.db.`
+The SQLite database file is persisted on the host machine using a Docker bind mount at `./backend/data/galaxy_explorer.db.`
 
 To reset or regenerate the dataset :
 
