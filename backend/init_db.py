@@ -49,7 +49,7 @@ def build_database():
     
     phrases, topics, models, prompt_indices, settings = [], [], [], [], []
     count_data = {}
-    MAX_PHRASES_PER_TOPIC = 50
+    MAX_PHRASES_PER_TOPIC = 100
     total_scanned = 0
     MAX_LINES_TO_SCAN = 10000
 
@@ -93,6 +93,8 @@ def build_database():
     embeddings = embed_sentences(phrases)
     print(f"  -> Embeddings calculated successfully in {time.time() - start_embed:.2f} seconds.")
 
+
+    
     print("Step 2/3 : Calculating t-SNE 3D (Positioning the points)...")
     start_tsne = time.time()
     perplexity = min(30, max(5, len(embeddings) // 100))
