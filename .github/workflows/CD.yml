@@ -9,12 +9,16 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - name: Pull latest code
-        run: |
-          cd ~/galaxy-explorer
-          git pull origin main
+      - name: Checkout latest code
+        uses: actions/checkout@v4
 
       - name: Rebuild & Restart Docker Containers
         run: |
           cd ~/galaxy-explorer
           docker compose up --build -d
+
+      - name: Display Backend Logs
+        run: |
+          cd ~/galaxy-explorer
+          sleep 3
+          docker compose logs --tail=100 backend
