@@ -132,13 +132,7 @@ export default function App() {
   const dynamicStats = useMemo(() => {
     return [
       { 
-        title: 'TOTAL DATA', 
-        value: formatCompactNumber(globalStats.totalScanned),
-        icon: 'monitoring', 
-        iconColor: '#2563EB' 
-      },
-      { 
-        title: 'PHRASES', 
+        title: ' PHRASES', 
         value: formatCompactNumber(filteredPoints.length), 
         icon: 'description', 
         iconColor: '#059669' 
@@ -232,7 +226,7 @@ export default function App() {
 
         <div className="stats-row">
           {loading ? (
-            Array.from({ length: 7 }).map((_, index) => (
+            Array.from({ length: 6 }).map((_, index) => (
               <StatCardSkeleton key={index} />
             ))
           ) : (
