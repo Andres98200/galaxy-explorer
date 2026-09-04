@@ -208,7 +208,7 @@ Continuous Integration and Deployment are managed via GitHub Actions and a **Git
 [license-shield]: https://img.shields.io/github/license/Andres98200/galaxy-explorer.svg?style=for-the-badge
 [license-url]: https://github.com/Andres98200/galaxy-explorer/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://www.linkedin.com/in/andres-felipe-torres-05ba26214/
+[linkedin-url]: https://www.linkedin.com/
 [product-screenshot]: frontend/public/image.png
 <!-- Shields.io badges. You can a comprehensive list with many more badges at: https://github.com/inttter/md-badges -->
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
