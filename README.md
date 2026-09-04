@@ -176,7 +176,7 @@ Continuous Integration and Deployment are managed via GitHub Actions and a **Git
   * The CI workflow validates that all commit messages strictly adhere to the **Conventional Commits** specification (e.g., `feat:`, `fix:`, `docs:`, `refactor:`) to maintain a clean git history and ensure build integrity.
 
 * **Continuous Deployment (CD):**
-  * Merges or pushes to the `main` branch trigger the automated deployment pipeline (`.github/workflows/deploy.yml`).
+  * Merges or pushes to the `main` branch trigger the automated deployment pipeline (`.github/workflows/CD.yml`).
   * The self-hosted runner pulls the latest changes and executes `docker compose up -d --build` automatically, ensuring zero-downtime updates without manual SSH intervention.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
